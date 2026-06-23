@@ -34,8 +34,8 @@ class AmberClient:
         return self._site_id
 
     def get_prices(self) -> List[PriceInterval]:
-        """Returns current interval plus next 6 forecast intervals (3 hours)."""
-        raw = self._api.get_current_prices(self._get_site_id(), next=36)  # ~3 hours of 5-min intervals
+        """Returns current interval plus up to 12 hours of 5-min forecast intervals."""
+        raw = self._api.get_current_prices(self._get_site_id(), next=144)  # 144 × 5-min = 12 hours
         intervals = []
         for wrapper in raw:
             r = wrapper.actual_instance
