@@ -48,10 +48,14 @@ class AmberClient:
             if channel not in ("general", "feed_in"):
                 continue
             descriptor = getattr(r.descriptor, "value", str(r.descriptor)).lower()
+            # Amber API returns feed-in per_kwh as negative when you receive credit
+            # (it's an outflow from Amber's perspective). Normalise so positive = credit.
+            raw_kwh = float(r.per_kwh)
+            per_kwh = -raw_kwh if channel == "feed_in" else raw_kwh
             intervals.append(PriceInterval(
                 channel=channel,
                 descriptor=descriptor,
-                per_kwh=float(r.per_kwh),
+                per_kwh=per_kwh,
                 start_time=r.start_time,
                 end_time=r.end_time,
                 is_forecast=getattr(r, "type", "") == "ForecastInterval",
