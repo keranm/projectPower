@@ -42,6 +42,12 @@ _EMPTY_PERIODS = [
 ]
 
 
+def _parse_tou_time(s: str) -> dt_time:
+    """Parse 'H:M' or 'HH:MM' strings from sph_detail / sph_read_ac_charge_times."""
+    h, m = s.split(":")
+    return dt_time(int(h), int(m))
+
+
 def _tou_window(minutes: int = 12):
     """Return (start, end) as datetime.time for now → now+minutes. Caps at 23:59 on midnight rollover."""
     now = datetime.now()
@@ -58,6 +64,57 @@ class GrowattClient:
         self._api.api_url = cfg.growatt_server + "v1/"
         self._serial = cfg.sph_serial
         self._tou_state = None  # None = unknown (post-startup) | "clear" | "dispatch" | "charge"
+        # Cached TOU tables read from inverter before first write — preserves user-configured periods
+        self._charge_cache = None   # {"charge_power", "charge_stop_soc", "mains_enabled", "periods": [3 dicts]}
+        self._discharge_cache = None  # [3 period dicts]
+
+    def _load_tou_cache(self) -> None:
+        """Read and cache the current TOU tables from the inverter. Called once before first write."""
+        if self._charge_cache is not None:
+            return
+
+        try:
+            raw = self._api.sph_read_ac_charge_times(self._serial)
+            periods = [
+                {
+                    "start_time": _parse_tou_time(p["start_time"]),
+                    "end_time":   _parse_tou_time(p["end_time"]),
+                    "enabled":    bool(p["enabled"]),
+                }
+                for p in raw.get("periods", [])
+            ]
+            self._charge_cache = {
+                "charge_power":    int(raw.get("charge_power", 100)),
+                "charge_stop_soc": int(raw.get("charge_stop_soc", 100)),
+                "mains_enabled":   bool(raw.get("mains_enabled", False)),
+                "periods":         periods if len(periods) == 3 else [dict(p) for p in _EMPTY_PERIODS],
+            }
+            log.info("TOU charge cache: power=%d stop_soc=%d mains=%s periods=%s",
+                     self._charge_cache["charge_power"], self._charge_cache["charge_stop_soc"],
+                     self._charge_cache["mains_enabled"],
+                     [(p["start_time"], p["end_time"], p["enabled"]) for p in self._charge_cache["periods"]])
+        except Exception as e:
+            log.warning("Failed to read charge TOU — using empty cache: %s", e)
+            self._charge_cache = {
+                "charge_power": 100, "charge_stop_soc": 100,
+                "mains_enabled": False, "periods": [dict(p) for p in _EMPTY_PERIODS],
+            }
+
+        try:
+            detail = self._api.sph_detail(self._serial)
+            self._discharge_cache = [
+                {
+                    "start_time": _parse_tou_time(detail.get(f"forcedDischargeTimeStart{n}", "0:0")),
+                    "end_time":   _parse_tou_time(detail.get(f"forcedDischargeTimeStop{n}", "0:0")),
+                    "enabled":    str(detail.get(f"forcedDischargeStopSwitch{n}", "0")) == "1",
+                }
+                for n in (1, 2, 3)
+            ]
+            log.info("TOU discharge cache: %s",
+                     [(p["start_time"], p["end_time"], p["enabled"]) for p in self._discharge_cache])
+        except Exception as e:
+            log.warning("Failed to read discharge TOU — using empty cache: %s", e)
+            self._discharge_cache = [dict(p) for p in _EMPTY_PERIODS]
 
     def get_state(self) -> InverterState:
         detail = self._api.sph_detail(self._serial)
@@ -89,46 +146,50 @@ class GrowattClient:
 
     def set_tou_dispatch(self, stop_soc: int = 40, power_pct: int = 100) -> None:
         """Enable battery→grid discharge for the next poll window (~12 min)."""
+        self._load_tou_cache()
         start, end = _tou_window(minutes=12)
         periods = [
             {"start_time": start, "end_time": end, "enabled": True},
-            _EMPTY_PERIODS[1], _EMPTY_PERIODS[2],
+            self._discharge_cache[1],  # preserve user's slots 2&3
+            self._discharge_cache[2],
         ]
-        result = self._api.sph_write_ac_discharge_times(
-            self._serial, power_pct, stop_soc, periods
-        )
+        result = self._api.sph_write_ac_discharge_times(self._serial, power_pct, stop_soc, periods)
         log.info("TOU dispatch %s–%s stop_soc=%d%% response=%s", start, end, stop_soc, result)
         if self._tou_state == "charge":
-            self._api.sph_write_ac_charge_times(self._serial, 100, 100, False, _EMPTY_PERIODS)
-            log.info("TOU charge window cleared (switching to dispatch)")
+            c = self._charge_cache
+            self._api.sph_write_ac_charge_times(
+                self._serial, c["charge_power"], c["charge_stop_soc"], c["mains_enabled"], c["periods"]
+            )
+            log.info("TOU charge restored from cache (switching to dispatch)")
         self._tou_state = "dispatch"
 
     def set_tou_charge(self, stop_soc: int = 60, power_pct: int = 100) -> None:
         """Enable grid→battery charge for the next poll window (~12 min)."""
+        self._load_tou_cache()
         start, end = _tou_window(minutes=12)
         periods = [
             {"start_time": start, "end_time": end, "enabled": True},
-            _EMPTY_PERIODS[1], _EMPTY_PERIODS[2],
+            self._charge_cache["periods"][1],  # preserve user's slots 2&3
+            self._charge_cache["periods"][2],
         ]
-        result = self._api.sph_write_ac_charge_times(
-            self._serial, power_pct, stop_soc, True, periods
-        )
+        result = self._api.sph_write_ac_charge_times(self._serial, power_pct, stop_soc, True, periods)
         log.info("TOU charge %s–%s stop_soc=%d%% response=%s", start, end, stop_soc, result)
         if self._tou_state == "dispatch":
-            self._api.sph_write_ac_discharge_times(self._serial, 100, 10, _EMPTY_PERIODS)
-            log.info("TOU discharge window cleared (switching to charge)")
+            self._api.sph_write_ac_discharge_times(self._serial, 100, 10, self._discharge_cache)
+            log.info("TOU discharge restored from cache (switching to charge)")
         self._tou_state = "charge"
 
     def clear_tou(self) -> None:
-        """Clear only TOU windows WE set — leaves user-configured Shine TOU untouched."""
+        """Restore TOU tables to cached startup state — leaves user-configured Shine TOU untouched."""
         if self._tou_state in (None, "clear"):
-            # None = unknown post-startup (don't touch what we didn't write)
-            # clear = already confirmed clear
             return
         if self._tou_state == "dispatch":
-            result = self._api.sph_write_ac_discharge_times(self._serial, 100, 10, _EMPTY_PERIODS)
-            log.info("TOU dispatch cleared response=%s", result)
+            result = self._api.sph_write_ac_discharge_times(self._serial, 100, 10, self._discharge_cache)
+            log.info("TOU dispatch cleared, discharge table restored response=%s", result)
         elif self._tou_state == "charge":
-            result = self._api.sph_write_ac_charge_times(self._serial, 100, 100, False, _EMPTY_PERIODS)
-            log.info("TOU charge cleared response=%s", result)
+            c = self._charge_cache
+            result = self._api.sph_write_ac_charge_times(
+                self._serial, c["charge_power"], c["charge_stop_soc"], c["mains_enabled"], c["periods"]
+            )
+            log.info("TOU charge cleared, charge table restored response=%s", result)
         self._tou_state = "clear"
