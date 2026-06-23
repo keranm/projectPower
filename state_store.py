@@ -14,6 +14,8 @@ def write_state(state, prices, decision, weather=None) -> None:
             "soc": state.soc,
             "ppv": state.ppv,
             "pac": state.pac,
+            "pac_to_grid": state.pac_to_grid,
+            "pac_to_user": state.pac_to_user,
             "pcharge1": state.pcharge1,
             "pdischarge1": state.pdischarge1,
             "plocal_load": state.plocal_load,

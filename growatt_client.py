@@ -13,11 +13,13 @@ PRIORITY_GRID = 2
 @dataclass
 class InverterState:
     soc: int
-    ppv: float           # solar watts
-    pac: float           # grid watts (positive = import, negative = export)
+    ppv: float           # solar watts (ppv1 + ppv2 total)
+    pac: float           # inverter AC output watts (NOT grid — use pac_to_grid/pac_to_user)
+    pac_to_grid: float   # watts flowing TO grid (positive = exporting)
+    pac_to_user: float   # watts flowing FROM grid to user (positive = importing)
     pcharge1: float      # battery charging watts
     pdischarge1: float   # battery discharging watts
-    plocal_load: float   # house consumption watts (plocalLoadTotal)
+    plocal_load: float   # house consumption watts — unreliable (0) on this firmware; use derived
     status_text: str
     bms_soh: int
     priority: int        # 0=load first, 1=battery first, 2=grid first
@@ -50,6 +52,8 @@ class GrowattClient:
             soc=int(float(energy.get("soc", 0))),
             ppv=float(energy.get("ppv", 0)),
             pac=float(energy.get("pac", 0)),
+            pac_to_grid=float(energy.get("pacToGridTotal", 0)),
+            pac_to_user=float(energy.get("pacToUserTotal", 0)),
             pcharge1=float(energy.get("pcharge1", 0)),
             pdischarge1=float(energy.get("pdischarge1", 0)),
             plocal_load=float(energy.get("plocalLoadTotal", 0)),

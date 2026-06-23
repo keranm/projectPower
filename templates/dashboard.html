@@ -372,22 +372,23 @@
     else               { bl.textContent = 'Battery';      bp.textContent = '0 W';            bp.style.color = ''; }
     document.getElementById('bms-soh').textContent = inv.bms_soh ?? '–';
 
-    document.getElementById('svg-ppv').textContent   = fmtW(inv.ppv ?? 0);
-    document.getElementById('svg-pload').textContent = fmtW(inv.plocal_load ?? 0);
-    document.getElementById('svg-pbatt').textContent = pdis > 50 ? '−' + fmtW(pdis) : pch > 50 ? '+' + fmtW(pch) : '0 W';
+    // pacToGridTotal / pacToUserTotal are the correctly-named fields for grid exchange.
+    // plocalLoadTotal is always 0 on this firmware — derive home load from energy balance.
+    const ptg = inv.pac_to_grid ?? 0;  // watts flowing TO grid (export)
+    const ptu = inv.pac_to_user ?? 0;  // watts flowing FROM grid (import)
+    const home = Math.max(0, (inv.ppv ?? 0) + pdis - pch + ptu - ptg);
 
-    // pac = inverter AC output power; actual grid net = home load minus inverter output
-    // positive pgrid = importing from grid, negative = exporting to grid
-    const pac = inv.pac ?? 0;
-    const pgrid = (inv.plocal_load ?? 0) - pac;
-    document.getElementById('svg-pgrid').textContent = pgrid > 100 ? '↓' + fmtW(pgrid) : pgrid < -100 ? '↑' + fmtW(Math.abs(pgrid)) : '0 W';
+    document.getElementById('svg-ppv').textContent   = fmtW(inv.ppv ?? 0);
+    document.getElementById('svg-pload').textContent = fmtW(home);
+    document.getElementById('svg-pbatt').textContent = pdis > 50 ? '−' + fmtW(pdis) : pch > 50 ? '+' + fmtW(pch) : '0 W';
+    document.getElementById('svg-pgrid').textContent = ptg > 100 ? '↑' + fmtW(ptg) : ptu > 100 ? '↓' + fmtW(ptu) : '0 W';
 
     const pb = document.getElementById('p-home-batt'), pg = document.getElementById('p-home-grid');
     if (pch > 50)       { pb.className = 'flow-path flow-anim-fwd'; pb.setAttribute('stroke', '#10b981'); }
     else if (pdis > 50) { pb.className = 'flow-path flow-anim-rev'; pb.setAttribute('stroke', '#f97316'); }
     else                { pb.className = 'flow-path flow-anim-off'; pb.setAttribute('stroke', '#6b88aa'); }
-    if (pgrid > 100)    { pg.className = 'flow-path flow-anim-rev'; pg.setAttribute('stroke', '#ef4444'); }
-    else if (pgrid < -100) { pg.className = 'flow-path flow-anim-fwd'; pg.setAttribute('stroke', '#10b981'); }
+    if (ptg > 100)      { pg.className = 'flow-path flow-anim-fwd'; pg.setAttribute('stroke', '#10b981'); }
+    else if (ptu > 100) { pg.className = 'flow-path flow-anim-rev'; pg.setAttribute('stroke', '#ef4444'); }
     else                { pg.className = 'flow-path flow-anim-off'; pg.setAttribute('stroke', '#6b88aa'); }
 
     document.getElementById('today-solar').textContent  = (inv.epv_today ?? 0).toFixed(1);

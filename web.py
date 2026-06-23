@@ -63,6 +63,7 @@ async def get_live():
         state = await asyncio.get_event_loop().run_in_executor(None, _growatt.get_state)
         return {
             "soc": state.soc, "ppv": state.ppv, "pac": state.pac,
+            "pac_to_grid": state.pac_to_grid, "pac_to_user": state.pac_to_user,
             "pcharge1": state.pcharge1, "pdischarge1": state.pdischarge1,
             "plocal_load": state.plocal_load, "status_text": state.status_text,
             "bms_soh": state.bms_soh,
