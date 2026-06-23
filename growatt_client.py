@@ -120,15 +120,12 @@ class GrowattClient:
         self._tou_state = "charge"
 
     def clear_tou(self) -> None:
-        """Disable all TOU windows — inverter operates in Battery First base mode."""
-        if self._tou_state == "clear":
-            return  # Already confirmed clear, skip API calls
-        if self._tou_state is None:
-            # Unknown state post-startup — clear both tables in case anything is active
-            r1 = self._api.sph_write_ac_discharge_times(self._serial, 100, 10, _EMPTY_PERIODS)
-            r2 = self._api.sph_write_ac_charge_times(self._serial, 100, 100, False, _EMPTY_PERIODS)
-            log.info("TOU cleared (prior state unknown) discharge=%s charge=%s", r1, r2)
-        elif self._tou_state == "dispatch":
+        """Clear only TOU windows WE set — leaves user-configured Shine TOU untouched."""
+        if self._tou_state in (None, "clear"):
+            # None = unknown post-startup (don't touch what we didn't write)
+            # clear = already confirmed clear
+            return
+        if self._tou_state == "dispatch":
             result = self._api.sph_write_ac_discharge_times(self._serial, 100, 10, _EMPTY_PERIODS)
             log.info("TOU dispatch cleared response=%s", result)
         elif self._tou_state == "charge":
