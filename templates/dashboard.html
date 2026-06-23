@@ -357,6 +357,57 @@
   function fmtHour(iso) { return new Date(iso).toLocaleTimeString([],{hour:'numeric',hour12:true}); }
   function wxIcon(c) { if(c===0)return'☀️';if(c<=1)return'🌤️';if(c<=2)return'⛅';if(c<=3)return'☁️';if(c<=48)return'🌫️';if(c<=67)return'🌧️';if(c<=77)return'❄️';if(c<=82)return'🌦️';return'⛈️'; }
 
+  function renderInverter(inv) {
+    const soc = inv.soc ?? 0, col = socColor(soc);
+    document.getElementById('gauge-fill').setAttribute('d', gaugePath(soc));
+    document.getElementById('gauge-fill').setAttribute('stroke', col);
+    document.getElementById('soc').textContent = soc;
+    document.getElementById('soc').style.color = col;
+    document.getElementById('status-text').textContent = inv.status_text ?? '–';
+
+    const pch = inv.pcharge1 ?? 0, pdis = inv.pdischarge1 ?? 0;
+    const bl = document.getElementById('batt-label'), bp = document.getElementById('batt-pwr');
+    if (pdis > 50)     { bl.textContent = 'Discharging'; bp.textContent = fmtW(pdis);       bp.style.color = '#f97316'; }
+    else if (pch > 50) { bl.textContent = 'Charging';    bp.textContent = '+' + fmtW(pch);  bp.style.color = '#10b981'; }
+    else               { bl.textContent = 'Battery';      bp.textContent = '0 W';            bp.style.color = ''; }
+    document.getElementById('bms-soh').textContent = inv.bms_soh ?? '–';
+
+    document.getElementById('svg-ppv').textContent   = fmtW(inv.ppv ?? 0);
+    document.getElementById('svg-pload').textContent = fmtW(inv.plocal_load ?? 0);
+    document.getElementById('svg-pbatt').textContent = pdis > 50 ? '−' + fmtW(pdis) : pch > 50 ? '+' + fmtW(pch) : '0 W';
+
+    // pac = inverter AC output power; actual grid net = home load minus inverter output
+    // positive pgrid = importing from grid, negative = exporting to grid
+    const pac = inv.pac ?? 0;
+    const pgrid = (inv.plocal_load ?? 0) - pac;
+    document.getElementById('svg-pgrid').textContent = pgrid > 100 ? '↓' + fmtW(pgrid) : pgrid < -100 ? '↑' + fmtW(Math.abs(pgrid)) : '0 W';
+
+    const pb = document.getElementById('p-home-batt'), pg = document.getElementById('p-home-grid');
+    if (pch > 50)       { pb.className = 'flow-path flow-anim-fwd'; pb.setAttribute('stroke', '#10b981'); }
+    else if (pdis > 50) { pb.className = 'flow-path flow-anim-rev'; pb.setAttribute('stroke', '#f97316'); }
+    else                { pb.className = 'flow-path flow-anim-off'; pb.setAttribute('stroke', '#6b88aa'); }
+    if (pgrid > 100)    { pg.className = 'flow-path flow-anim-rev'; pg.setAttribute('stroke', '#ef4444'); }
+    else if (pgrid < -100) { pg.className = 'flow-path flow-anim-fwd'; pg.setAttribute('stroke', '#10b981'); }
+    else                { pg.className = 'flow-path flow-anim-off'; pg.setAttribute('stroke', '#6b88aa'); }
+
+    document.getElementById('today-solar').textContent  = (inv.epv_today ?? 0).toFixed(1);
+    document.getElementById('today-load').textContent   = (inv.eload_today ?? 0).toFixed(1);
+    document.getElementById('today-import').textContent = (inv.eimport_today ?? 0).toFixed(1);
+    document.getElementById('today-export').textContent = (inv.eexport_today ?? 0).toFixed(1);
+  }
+
+  async function loadLive() {
+    try {
+      const res = await fetch('/api/live');
+      if (!res.ok) return;
+      const inv = await res.json();
+      if (inv.error) return;
+      renderInverter(inv);
+      lastUpdated = new Date().toISOString();
+      tickTimestamp();
+    } catch(e) {}
+  }
+
   function render(data) {
     document.getElementById('loading-state').classList.add('hidden');
     document.getElementById('dashboard').classList.remove('hidden');
@@ -370,33 +421,7 @@
     dot.className = staleMin > 10 ? 'status-dot stale' : 'status-dot live';
     lbl.textContent = staleMin > 10 ? 'Stale' : 'Live';
 
-    const soc=inv.soc??0, col=socColor(soc);
-    document.getElementById('gauge-fill').setAttribute('d', gaugePath(soc));
-    document.getElementById('gauge-fill').setAttribute('stroke', col);
-    document.getElementById('soc').textContent = soc;
-    document.getElementById('soc').style.color = col;
-    document.getElementById('status-text').textContent = inv.status_text ?? '–';
-
-    const pch=inv.pcharge1??0, pdis=inv.pdischarge1??0;
-    const bl=document.getElementById('batt-label'), bp=document.getElementById('batt-pwr');
-    if (pdis>50)      { bl.textContent='Discharging'; bp.textContent=fmtW(pdis); bp.style.color='#f97316'; }
-    else if (pch>50)  { bl.textContent='Charging';    bp.textContent='+'+fmtW(pch); bp.style.color='#10b981'; }
-    else              { bl.textContent='Battery';      bp.textContent='0 W'; bp.style.color=''; }
-    document.getElementById('bms-soh').textContent = inv.bms_soh ?? '–';
-
-    document.getElementById('svg-ppv').textContent   = fmtW(inv.ppv??0);
-    document.getElementById('svg-pload').textContent = fmtW(inv.plocal_load??0);
-    document.getElementById('svg-pbatt').textContent = pdis>50?'−'+fmtW(pdis):pch>50?'+'+fmtW(pch):'0 W';
-    const pac=inv.pac??0;
-    document.getElementById('svg-pgrid').textContent = pac>100?'↓'+fmtW(pac):pac<-100?'↑'+fmtW(Math.abs(pac)):'0 W';
-
-    const pb=document.getElementById('p-home-batt'), pg=document.getElementById('p-home-grid');
-    if (pch>50)       { pb.className='flow-path flow-anim-fwd'; pb.setAttribute('stroke','#10b981'); }
-    else if (pdis>50) { pb.className='flow-path flow-anim-rev'; pb.setAttribute('stroke','#f97316'); }
-    else              { pb.className='flow-path flow-anim-off'; pb.setAttribute('stroke','#6b88aa'); }
-    if (pac>100)      { pg.className='flow-path flow-anim-rev'; pg.setAttribute('stroke','#ef4444'); }
-    else if (pac<-100){ pg.className='flow-path flow-anim-fwd'; pg.setAttribute('stroke','#10b981'); }
-    else              { pg.className='flow-path flow-anim-off'; pg.setAttribute('stroke','#6b88aa'); }
+    renderInverter(inv);
 
     const general = prices.filter(p => p.channel === 'general' || !p.channel);
     const feedin  = prices.filter(p => p.channel === 'feed_in');
@@ -430,10 +455,7 @@
 
     document.getElementById('decision-action').textContent = ACTION_LABELS[decision.action]??decision.action??'–';
     document.getElementById('decision-reason').textContent = decision.reason??'–';
-    document.getElementById('today-solar').textContent  = (inv.epv_today??0).toFixed(1);
-    document.getElementById('today-load').textContent   = (inv.eload_today??0).toFixed(1);
-    document.getElementById('today-import').textContent = (inv.eimport_today??0).toFixed(1);
-    document.getElementById('today-export').textContent = (inv.eexport_today??0).toFixed(1);
+    // today's stats rendered by renderInverter()
 
     renderWeather(data.weather);
     renderPriceForecast('buy-forecast',  general.filter(p => p.is_forecast));
@@ -544,7 +566,9 @@
   }
 
   loadState();
-  setInterval(loadState,     30_000);
+  loadLive();
+  setInterval(loadLive,      30_000);   // inverter data: near-live every 30s
+  setInterval(loadState,     60_000);   // prices + decisions: every 60s (state.json updates every 5 min)
   setInterval(tickTimestamp,  5_000);
 </script>
 </body>

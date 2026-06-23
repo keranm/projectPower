@@ -1,3 +1,4 @@
+import asyncio
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -10,11 +11,19 @@ from pydantic import BaseModel
 
 import history
 import state_store
+from growatt_client import GrowattClient
+
+_growatt: GrowattClient | None = None
 
 
 @asynccontextmanager
 async def _lifespan(app: FastAPI):
+    global _growatt
     history.init_db()
+    try:
+        _growatt = GrowattClient()
+    except Exception:
+        pass  # dashboard still works without live inverter data
     yield
 
 
@@ -43,6 +52,25 @@ async def get_state():
         )
     state["override"] = state_store.read_override()
     return state
+
+
+@app.get("/api/live")
+async def get_live():
+    """Direct Growatt query — bypasses state.json, reflects live inverter readings."""
+    if _growatt is None:
+        raise HTTPException(503, detail="Growatt client not available")
+    try:
+        state = await asyncio.get_event_loop().run_in_executor(None, _growatt.get_state)
+        return {
+            "soc": state.soc, "ppv": state.ppv, "pac": state.pac,
+            "pcharge1": state.pcharge1, "pdischarge1": state.pdischarge1,
+            "plocal_load": state.plocal_load, "status_text": state.status_text,
+            "bms_soh": state.bms_soh,
+            "epv_today": state.epv_today, "eload_today": state.eload_today,
+            "eimport_today": state.eimport_today, "eexport_today": state.eexport_today,
+        }
+    except Exception as e:
+        raise HTTPException(503, detail=str(e))
 
 
 @app.get("/api/history")
