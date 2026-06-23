@@ -99,24 +99,33 @@ GROWATT_SPH_SERIAL=QHM0E1303B
 GROWATT_PLANT_ID=2783677
 AMBER_TOKEN=...             # Amber API token
 ADDRESS=26 Stoneleigh Avenue, Mount Barker, 5251, South Australia
-DRY_RUN=true                # KEEP TRUE until writes are verified
+DRY_RUN=false               # Live writes via TOU segment API (verified working)
 POLL_INTERVAL=300
 GRID_CHARGE_MAX_PRICE=10    # c/kWh — grid charge only below this
-PRECHARGE_MAX_PRICE=20      # c/kWh — heating pre-charge threshold
+PRECHARGE_MAX_PRICE=40      # c/kWh — heating pre-charge cap (relative ratio also applies)
 ```
 
 ---
 
 ## Decision engine logic (priority order)
 
-1. **Spike protection** — if current or forecast price is `spike`: `set_grid_first` (export battery)
-2. **Heating pre-charge** — if approaching morning (06-09) or evening (17-21) heating window, SOC < target, price ≤ 20c: `enable_ac_charge`
-3. **Cheap grid charge** — price ≤ 10c and SOC < 90%: `set_battery_first`
-4. **Export for profit** — price descriptor is `high` or `spike` and SOC > 40%: `set_grid_first`
-5. **Solar window** (10:00-16:00) — preserve Battery First so solar charges battery: `none`
-6. **Default** — `set_load_first`
+Lookahead engine — uses 12h price forecast (`next=144`) and dynamic SOC floor.
 
-Price thresholds are **absolute c/kWh** (not Amber's relative descriptors) for grid charge decisions. Amber descriptors are still used for export/spike logic.
+1. **Spike protection** — current or forecast spike → `set_grid_first` (dispatch)
+2. **Negative feed-in** — Amber would charge us to export → `none`
+3. **Pre-charge for heating** — temp < 18°C, heating within 6h, est. SOC < target, price ≤ 40c AND < 1.5× forecast peak → `enable_ac_charge` (target_soc = morning/evening target)
+4. **Cheap grid charge** — price ≤ 10c and SOC < 90% → `set_battery_first` (rarely fires in SA)
+5. **Dispatch for profit** — sell_price > forecast_peak_6h × 0.9 (future value), OR sell attractive + no high prices forecast → `set_grid_first` if SOC > dynamic_floor
+6. **Preserve** — prices high now or in 6h forecast → `set_battery_first` (self-consume)
+7. **Solar window** (10:00–16:00) → `none`
+8. **Default** → `set_load_first`
+
+**Dynamic SOC floor**: overnight when morning heating < 8h away, floor = max(40%, heating_reserve_soc). heating_reserve_soc ≈ 52% for 3.5kW heater × 2h on 15kWh battery.
+
+**Inverter control via TOU segments** (not mix_energy_priority which is broken):
+- `set_grid_first` → `sph_write_ac_discharge_times` window for now+12min, stop_soc=40%
+- `enable_ac_charge` → `sph_write_ac_charge_times` window for now+12min, stop_soc=target
+- All other actions → clear TOU windows, inverter operates in Battery First base mode
 
 ---
 
@@ -164,8 +173,7 @@ Query API: `GET /api/history?hours=24` — auto-downsamples (raw for ≤24h, 30-
 
 ## Pending work
 
-- **Verify write API calls** — confirm `set_priority()` / `sph_write_ac_charge_times` signatures against growattServer source before disabling DRY_RUN
-- **Enable live writes** — disable DRY_RUN once write calls are verified and decision log looks sensible
-- **Pattern learning / suggestions** — Phase 2, use history.db to identify usage patterns and surface recommendations
 - **Amber daily cost** — integrate Amber's usage API for actual billing cost in Today card
-- **Pi disk space** — at 86% used, worth monitoring; `df -h /` on Pi
+- **Pi disk space** — at 87% used; plan to add USB drive and move history.db + logs there
+- **Phase 2: learn heating load** — replace static HEATING_LOAD_W/HEATING_DURATION_HOURS with values derived from history.db after 4+ weeks of data
+- **Phase 2: summer cooling** — reverse heating reserve logic when temp > threshold (cooling load instead)

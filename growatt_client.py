@@ -1,13 +1,10 @@
 from dataclasses import dataclass
+from datetime import datetime, time as dt_time, timedelta
 
 import growattServer
 
 from config import cfg
 from logger import log
-
-PRIORITY_LOAD = 0
-PRIORITY_BATTERY = 1
-PRIORITY_GRID = 2
 
 
 @dataclass
@@ -38,12 +35,29 @@ class InverterState:
     edischarge_today: float
 
 
+_EMPTY_PERIODS = [
+    {"start_time": dt_time(0, 0), "end_time": dt_time(0, 0), "enabled": False},
+    {"start_time": dt_time(0, 0), "end_time": dt_time(0, 0), "enabled": False},
+    {"start_time": dt_time(0, 0), "end_time": dt_time(0, 0), "enabled": False},
+]
+
+
+def _tou_window(minutes: int = 12):
+    """Return (start, end) as datetime.time for now → now+minutes. Caps at 23:59 on midnight rollover."""
+    now = datetime.now()
+    end_dt = now + timedelta(minutes=minutes)
+    start = dt_time(now.hour, now.minute)
+    end = dt_time(23, 59) if end_dt.date() > now.date() else dt_time(end_dt.hour, end_dt.minute)
+    return start, end
+
+
 class GrowattClient:
     def __init__(self):
         self._api = growattServer.OpenApiV1(token=cfg.growatt_token)
         self._api.server_url = cfg.growatt_server
         self._api.api_url = cfg.growatt_server + "v1/"
         self._serial = cfg.sph_serial
+        self._tou_state = None  # None | "dispatch" | "charge"
 
     def get_state(self) -> InverterState:
         detail = self._api.sph_detail(self._serial)
@@ -73,37 +87,56 @@ class GrowattClient:
             edischarge_today=float(energy.get("edischarge1Today", 0)),
         )
 
-    def set_priority(self, priority: int) -> None:
-        # SPH priority via mixSet endpoint, type=mix_energy_priority: 0=load first, 1=battery first, 2=grid first
-        result = self._api.sph_write_parameter(self._serial, "mix_energy_priority", str(priority))
-        log.info("Growatt priority set to %d, response: %s", priority, result)
+    def initialize(self) -> None:
+        """Clear any stale TOU windows left by a prior run."""
+        try:
+            self._api.sph_write_ac_discharge_times(self._serial, 100, 10, _EMPTY_PERIODS)
+            self._api.sph_write_ac_charge_times(self._serial, 100, 100, False, _EMPTY_PERIODS)
+            log.info("TOU tables cleared on startup")
+        except Exception as e:
+            log.warning("TOU table clear on startup failed (non-fatal): %s", e)
+        self._tou_state = None
 
-    def set_ac_charge_times(
-        self,
-        start1: str, stop1: str, enabled1: bool,
-        start2: str = "00:00", stop2: str = "00:00", enabled2: bool = False,
-        start3: str = "00:00", stop3: str = "00:00", enabled3: bool = False,
-    ) -> None:
-        # TODO: verify exact parameter order against growattServer source before first live use
-        self._api.sph_write_ac_charge_times(
-            self._serial,
-            start1, stop1, "1" if enabled1 else "0",
-            start2, stop2, "1" if enabled2 else "0",
-            start3, stop3, "1" if enabled3 else "0",
+    def set_tou_dispatch(self, stop_soc: int = 40, power_pct: int = 100) -> None:
+        """Enable battery→grid discharge for the next poll window (~12 min)."""
+        start, end = _tou_window(minutes=12)
+        periods = [
+            {"start_time": start, "end_time": end, "enabled": True},
+            _EMPTY_PERIODS[1], _EMPTY_PERIODS[2],
+        ]
+        result = self._api.sph_write_ac_discharge_times(
+            self._serial, power_pct, stop_soc, periods
         )
-        log.info("Growatt AC charge times written: %s-%s enabled=%s", start1, stop1, enabled1)
+        log.info("TOU dispatch %s–%s stop_soc=%d%% response=%s", start, end, stop_soc, result)
+        if self._tou_state == "charge":
+            self._api.sph_write_ac_charge_times(self._serial, 100, 100, False, _EMPTY_PERIODS)
+            log.info("TOU charge window cleared (switching to dispatch)")
+        self._tou_state = "dispatch"
 
-    def set_discharge_times(
-        self,
-        start1: str, stop1: str, enabled1: bool,
-        start2: str = "00:00", stop2: str = "00:00", enabled2: bool = False,
-        start3: str = "00:00", stop3: str = "00:00", enabled3: bool = False,
-    ) -> None:
-        # TODO: verify exact parameter order against growattServer source before first live use
-        self._api.sph_write_ac_discharge_times(
-            self._serial,
-            start1, stop1, "1" if enabled1 else "0",
-            start2, stop2, "1" if enabled2 else "0",
-            start3, stop3, "1" if enabled3 else "0",
+    def set_tou_charge(self, stop_soc: int = 60, power_pct: int = 100) -> None:
+        """Enable grid→battery charge for the next poll window (~12 min)."""
+        start, end = _tou_window(minutes=12)
+        periods = [
+            {"start_time": start, "end_time": end, "enabled": True},
+            _EMPTY_PERIODS[1], _EMPTY_PERIODS[2],
+        ]
+        result = self._api.sph_write_ac_charge_times(
+            self._serial, power_pct, stop_soc, True, periods
         )
-        log.info("Growatt discharge times written: %s-%s enabled=%s", start1, stop1, enabled1)
+        log.info("TOU charge %s–%s stop_soc=%d%% response=%s", start, end, stop_soc, result)
+        if self._tou_state == "dispatch":
+            self._api.sph_write_ac_discharge_times(self._serial, 100, 10, _EMPTY_PERIODS)
+            log.info("TOU discharge window cleared (switching to charge)")
+        self._tou_state = "charge"
+
+    def clear_tou(self) -> None:
+        """Disable all TOU windows — inverter operates in Battery First base mode."""
+        if self._tou_state is None:
+            return  # Already clear, skip API calls
+        if self._tou_state == "dispatch":
+            result = self._api.sph_write_ac_discharge_times(self._serial, 100, 10, _EMPTY_PERIODS)
+            log.info("TOU dispatch cleared response=%s", result)
+        elif self._tou_state == "charge":
+            result = self._api.sph_write_ac_charge_times(self._serial, 100, 100, False, _EMPTY_PERIODS)
+            log.info("TOU charge cleared response=%s", result)
+        self._tou_state = None

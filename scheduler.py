@@ -1,10 +1,9 @@
 import time
-import sys
 
 from amber_client import AmberClient
 from config import cfg
 from decision_engine import evaluate, Decision
-from growatt_client import GrowattClient, PRIORITY_BATTERY, PRIORITY_GRID, PRIORITY_LOAD
+from growatt_client import GrowattClient
 from logger import log
 from weather_client import WeatherClient
 import history
@@ -12,26 +11,18 @@ import state_store
 
 
 def apply_decision(decision: Decision, growatt: GrowattClient) -> None:
-    action = decision.action
-
-    if action == "none":
-        return
-
     if cfg.dry_run:
-        log.info("[DRY-RUN] Would execute: %s", action)
+        log.info("[DRY-RUN] Would execute: %s", decision.action)
         return
 
-    if action == "set_load_first":
-        growatt.set_priority(PRIORITY_LOAD)
-    elif action == "set_battery_first":
-        growatt.set_priority(PRIORITY_BATTERY)
-    elif action == "set_grid_first":
-        growatt.set_priority(PRIORITY_GRID)
+    action = decision.action
+    if action == "set_grid_first":
+        growatt.set_tou_dispatch(stop_soc=cfg.export_soc_min)
     elif action == "enable_ac_charge":
-        # TODO: calculate appropriate charge window start/stop before implementing
-        log.warning("enable_ac_charge action reached — window times not yet implemented")
+        growatt.set_tou_charge(stop_soc=decision.target_soc or cfg.morning_soc_target)
     else:
-        log.warning("Unknown action: %s", action)
+        # "none", "set_battery_first", "set_load_first" — clear TOU, Battery First base mode
+        growatt.clear_tou()
 
 
 def run_once(growatt: GrowattClient, amber: AmberClient, weather_client: WeatherClient) -> None:
@@ -99,6 +90,8 @@ def main() -> None:
 
     history.init_db()
     growatt = GrowattClient()
+    if not cfg.dry_run:
+        growatt.initialize()  # Clear stale TOU windows from any prior run
     amber = AmberClient()
     weather_client = WeatherClient()
 

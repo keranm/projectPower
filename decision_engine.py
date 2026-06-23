@@ -9,9 +9,10 @@ from growatt_client import InverterState
 
 @dataclass
 class Decision:
-    action: str    # 'none' | 'set_load_first' | 'set_battery_first' | 'set_grid_first' | 'enable_ac_charge'
+    action: str       # 'none' | 'set_load_first' | 'set_battery_first' | 'set_grid_first' | 'enable_ac_charge'
     reason: str
-    priority: int  # 1-4 matching brief priorities; 0 = default
+    priority: int     # 1-4 matching brief priorities; 0 = default
+    target_soc: int = 0  # SOC% to charge to; only used when action=enable_ac_charge
 
 
 def _parse_time(t: str) -> time:
@@ -66,14 +67,6 @@ def _solar_will_refill(weather, window_start: str) -> bool:
 def evaluate(state: InverterState, prices: List[PriceInterval], weather=None) -> Decision:
     now = datetime.now()
     current_time = now.time()
-
-    if weather:
-        from logger import log
-        log.info(
-            "Weather: %s %.1f°C cloud=%d%% solar=%.0fW/m² sunny=%s | %s",
-            weather.weather_desc, weather.temperature, weather.cloud_cover,
-            weather.solar_radiation, weather.is_sunny, weather.trend,
-        )
 
     general = [p for p in prices if p.channel == "general"]
     feedin  = [p for p in prices if p.channel == "feed_in"]
@@ -148,6 +141,7 @@ def evaluate(state: InverterState, prices: List[PriceInterval], weather=None) ->
                         f"charging at {current_price.per_kwh:.0f}c (forecast peak {forecast_peak_6h:.0f}c)"
                     ),
                     priority=2,
+                    target_soc=soc_target,
                 )
 
     # ── Priority 4: Opportunistic cheap grid charge ───────────────────────────────
