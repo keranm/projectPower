@@ -43,18 +43,23 @@ def evaluate(state: InverterState, prices: List[PriceInterval], weather=None) ->
             weather.solar_radiation, weather.is_sunny, weather.trend,
         )
 
-    current_price = prices[0] if prices else None
+    general = [p for p in prices if p.channel == "general"]
+    feedin  = [p for p in prices if p.channel == "feed_in"]
+
+    current_price = general[0] if general else None
+    current_feedin = feedin[0] if feedin else None
     current_descriptor = current_price.descriptor if current_price else "neutral"
-    forecast_descriptors = {p.descriptor for p in prices[1:]}
+    forecast_descriptors = {p.descriptor for p in general[1:]}
 
     # --- Priority 1: Spike protection ---
     is_spike = current_descriptor in SPIKE_DESCRIPTORS
     forecast_spike = bool(forecast_descriptors & SPIKE_DESCRIPTORS)
 
     if is_spike or forecast_spike:
+        feedin_str = f", sell {current_feedin.per_kwh:.0f}c" if current_feedin else ""
         reason = (
             f"price spike {'active' if is_spike else 'forecast'} "
-            f"({current_price.per_kwh:.0f} c/kWh)" if current_price else "spike detected"
+            f"(buy {current_price.per_kwh:.0f} c/kWh{feedin_str})" if current_price else "spike detected"
         )
         return Decision(action="set_grid_first", reason=reason, priority=1)
 
@@ -86,10 +91,12 @@ def evaluate(state: InverterState, prices: List[PriceInterval], weather=None) ->
         )
 
     # --- Priority 4: Export for profit ---
-    if current_descriptor in HIGH_DESCRIPTORS and state.soc > cfg.export_soc_min:
+    feedin_attractive = current_feedin and current_feedin.per_kwh >= cfg.export_feedin_min
+    if (current_descriptor in HIGH_DESCRIPTORS or feedin_attractive) and state.soc > cfg.export_soc_min:
+        fi_str = f", sell {current_feedin.per_kwh:.0f}c" if current_feedin else ""
         return Decision(
             action="set_grid_first",
-            reason=f"high price ({current_descriptor}, {current_price.per_kwh:.0f} c/kWh), SOC {state.soc}%",
+            reason=f"high price ({current_descriptor}, buy {current_price.per_kwh:.0f} c/kWh{fi_str}), SOC {state.soc}%",
             priority=4,
         )
 

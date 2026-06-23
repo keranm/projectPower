@@ -49,7 +49,7 @@ def _conn() -> sqlite3.Connection:
 
 
 def write_reading(state, prices=None, weather=None) -> None:
-    current = next((p for p in (prices or []) if not p.is_forecast), None)
+    current = next((p for p in (prices or []) if not p.is_forecast and getattr(p, 'channel', 'general') == 'general'), None)
     ts = int(datetime.now(timezone.utc).timestamp())
     with _conn() as c:
         c.execute("""

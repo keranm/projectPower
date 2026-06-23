@@ -31,6 +31,7 @@ def write_state(state, prices, decision, weather=None) -> None:
         },
         "prices": [
             {
+                "channel": p.channel,
                 "descriptor": p.descriptor,
                 "per_kwh": p.per_kwh,
                 "start_time": p.start_time.isoformat(),

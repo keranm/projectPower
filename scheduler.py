@@ -49,11 +49,14 @@ def run_once(growatt: GrowattClient, amber: AmberClient, weather_client: Weather
     try:
         prices = amber.get_prices()
         if prices:
+            general = [p for p in prices if p.channel == "general"]
+            feedin  = [p for p in prices if p.channel == "feed_in"]
             log.info(
-                "Amber: current=%s %.0f c/kWh, forecast=%s",
-                prices[0].descriptor,
-                prices[0].per_kwh,
-                [p.descriptor for p in prices[1:4]],
+                "Amber: buy=%s %.0f c/kWh sell=%.0f c/kWh, forecast=%s",
+                general[0].descriptor if general else "?",
+                general[0].per_kwh if general else 0,
+                feedin[0].per_kwh if feedin else 0,
+                [p.descriptor for p in general[1:4]],
             )
     except Exception as e:
         log.error("Amber read failed — skipping decision cycle: %s", e)

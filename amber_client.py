@@ -12,6 +12,7 @@ CHEAP_DESCRIPTORS = {"extremely_low", "very_low"}
 
 @dataclass
 class PriceInterval:
+    channel: str          # "general" (buy) or "feed_in" (sell/export tariff)
     descriptor: str
     per_kwh: float        # cents/kWh
     start_time: object    # datetime
@@ -41,10 +42,12 @@ class AmberClient:
             if r is None:
                 continue
             # channel_type is an enum; .value gives the string
-            if getattr(r.channel_type, "value", r.channel_type) != "general":
+            channel = getattr(r.channel_type, "value", r.channel_type)
+            if channel not in ("general", "feed_in"):
                 continue
             descriptor = getattr(r.descriptor, "value", str(r.descriptor)).lower()
             intervals.append(PriceInterval(
+                channel=channel,
                 descriptor=descriptor,
                 per_kwh=float(r.per_kwh),
                 start_time=r.start_time,

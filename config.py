@@ -26,6 +26,7 @@ class Config:
     export_soc_min: int = 40
     grid_charge_max_price: float = field(default_factory=lambda: float(os.getenv("GRID_CHARGE_MAX_PRICE", "10")))
     precharge_max_price: float = field(default_factory=lambda: float(os.getenv("PRECHARGE_MAX_PRICE", "20")))
+    export_feedin_min: float = field(default_factory=lambda: float(os.getenv("EXPORT_FEEDIN_MIN", "20")))
 
     morning_heating_start: str = "06:00"
     morning_heating_end: str = "09:00"

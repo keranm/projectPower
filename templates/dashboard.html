@@ -87,7 +87,7 @@
     .fc-time{font-family:'JetBrains Mono',monospace;font-size:.6875rem;color:var(--text-3);width:2.75rem;flex-shrink:0}
     .fc-bar-track{flex:1;height:5px;background:var(--elevated);border-radius:9999px;overflow:hidden}
     .fc-bar-fill{height:100%;border-radius:9999px}
-    .fc-price{font-family:'JetBrains Mono',monospace;font-size:.6875rem;color:var(--text-2);width:2.25rem;text-align:right;flex-shrink:0}
+    .fc-price{font-family:'JetBrains Mono',monospace;font-size:.6875rem;color:var(--text-2);width:2.5rem;text-align:right;flex-shrink:0}
     .fc-badge{font-size:.5625rem;font-weight:700;letter-spacing:.04em;padding:.2rem .625rem;border-radius:9999px;width:5.5rem;text-align:center;flex-shrink:0}
     .override-grid{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:.875rem}
     .ovr-btn{display:flex;align-items:center;justify-content:center;gap:.4rem;padding:.8rem .75rem;border-radius:12px;font-size:.75rem;font-weight:600;background:var(--elevated);border:1px solid var(--border);color:var(--text-2);transition:all .15s}
@@ -157,7 +157,7 @@
       <div class="gauge-wrap">
         <div style="position:relative;width:192px;height:192px">
           <svg viewBox="0 0 192 192" width="192" height="192" style="overflow:visible">
-            <path class="gauge-track" d="M 40.84 40.84 A 78 78 0 1 1 151.16 40.84"/>
+            <path class="gauge-track" d="M 40.84 40.84 A 78 78 0 1 0 151.16 40.84"/>
             <path id="gauge-fill" class="gauge-fill" stroke="#10b981" d="M 40.84 40.84 A 78 78 0 0 1 40.84 40.84"/>
           </svg>
           <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">
@@ -203,12 +203,25 @@
 
     <!-- Price + Decision -->
     <div class="card">
-      <div class="card-label">Current Price</div>
-      <div style="display:flex;align-items:baseline;gap:.5rem;margin-bottom:.625rem">
-        <span id="price-kwh" class="price-num" style="font-family:'JetBrains Mono',monospace">–</span>
-        <span style="font-size:.875rem;color:var(--text-2);font-weight:500">c/kWh</span>
+      <div class="card-label">Electricity Prices</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:.625rem">
+        <div>
+          <div style="font-size:.5625rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-3);margin-bottom:.35rem">Buy</div>
+          <div style="display:flex;align-items:baseline;gap:.3rem">
+            <span id="price-kwh" class="price-num" style="font-family:'JetBrains Mono',monospace;font-size:2.25rem">–</span>
+            <span style="font-size:.75rem;color:var(--text-2);font-weight:500">c/kWh</span>
+          </div>
+          <span id="price-badge" class="price-descriptor" style="margin-top:.4rem">–</span>
+        </div>
+        <div>
+          <div style="font-size:.5625rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-3);margin-bottom:.35rem">Sell (Feed-in)</div>
+          <div style="display:flex;align-items:baseline;gap:.3rem">
+            <span id="feedin-kwh" class="price-num" style="font-family:'JetBrains Mono',monospace;font-size:2.25rem;color:#10b981">–</span>
+            <span style="font-size:.75rem;color:var(--text-2);font-weight:500">c/kWh</span>
+          </div>
+          <span id="feedin-badge" class="price-descriptor" style="margin-top:.4rem;background:rgba(16,185,129,.12);color:#10b981">–</span>
+        </div>
       </div>
-      <span id="price-badge" class="price-descriptor">–</span>
       <div class="price-bar-track"><div id="price-bar" class="price-bar-fill" style="width:10%"></div></div>
       <hr class="divider">
       <div class="card-label" style="margin-bottom:.5rem">System Decision</div>
@@ -384,7 +397,10 @@
     else if (pac<-100){ pg.className='flow-path flow-anim-fwd'; pg.setAttribute('stroke','#10b981'); }
     else              { pg.className='flow-path flow-anim-off'; pg.setAttribute('stroke','#6b88aa'); }
 
-    const cur = prices.find(p => !p.is_forecast);
+    const general = prices.filter(p => p.channel === 'general' || !p.channel);
+    const feedin  = prices.filter(p => p.channel === 'feed_in');
+    const cur = general.find(p => !p.is_forecast);
+    const curFI = feedin.find(p => !p.is_forecast);
     if (cur) {
       document.getElementById('price-kwh').textContent = cur.per_kwh.toFixed(1);
       const badge=document.getElementById('price-badge');
@@ -393,6 +409,12 @@
       const bar=document.getElementById('price-bar');
       bar.className=`price-bar-fill bar-${cur.descriptor}`;
       bar.style.width=Math.max(5,Math.min(100,(cur.per_kwh/40)*100)).toFixed(0)+'%';
+    }
+    if (curFI) {
+      document.getElementById('feedin-kwh').textContent = curFI.per_kwh.toFixed(1);
+      document.getElementById('feedin-badge').textContent = curFI.per_kwh >= 0
+        ? (PRICE_LABELS[curFI.descriptor] ?? curFI.descriptor)
+        : 'Negative';
     }
 
     document.getElementById('decision-action').textContent = ACTION_LABELS[decision.action]??decision.action??'–';
@@ -403,7 +425,7 @@
     document.getElementById('today-export').textContent = (inv.eexport_today??0).toFixed(1);
 
     renderWeather(data.weather);
-    renderForecast(prices.filter(p => p.is_forecast));
+    renderForecast(general.filter(p => p.is_forecast), feedin.filter(p => p.is_forecast));
     renderOverride();
     renderDuration(selectedDuration);
   }
@@ -427,12 +449,15 @@
     ).join('');
   }
 
-  function renderForecast(intervals) {
+  function renderForecast(intervals, fiIntervals) {
     const el=document.getElementById('forecast');
     if (!intervals.length) { el.innerHTML='<p style="font-size:.8125rem;color:var(--text-3)">No forecast data</p>'; return; }
+    // Build feed-in lookup by start_time
+    const fiMap={};
+    (fiIntervals||[]).forEach(p => fiMap[p.start_time]=p.per_kwh);
     const blocks=[]; let cur=null;
     for (const iv of intervals) {
-      if (!cur||cur.descriptor!==iv.descriptor) { cur={...iv,count:1}; blocks.push(cur); }
+      if (!cur||cur.descriptor!==iv.descriptor) { cur={...iv,count:1,fi:fiMap[iv.start_time]}; blocks.push(cur); }
       else { cur.count++; cur.end_time=iv.end_time; }
     }
     const maxP=Math.max(...intervals.map(p=>p.per_kwh),1);
@@ -442,6 +467,7 @@
         <div class="fc-bar-track"><div class="fc-bar-fill bar-${b.descriptor}" style="width:${Math.max(4,(b.per_kwh/maxP)*100).toFixed(1)}%"></div></div>
         <span class="fc-price">${b.per_kwh.toFixed(1)}c</span>
         <span class="fc-badge p-${b.descriptor}">${PRICE_LABELS[b.descriptor]??b.descriptor}</span>
+        ${b.fi!=null?`<span style="font-family:'JetBrains Mono',monospace;font-size:.6rem;color:#10b981;flex-shrink:0">↑${b.fi.toFixed(1)}c</span>`:''}
       </div>`).join('');
   }
 
