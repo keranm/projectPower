@@ -74,8 +74,8 @@ class GrowattClient:
         )
 
     def set_priority(self, priority: int) -> None:
-        # SPH priority via mixSet endpoint, type=pbd: 0=load first, 1=battery first, 2=grid first
-        result = self._api.sph_write_parameter(self._serial, "pbd", str(priority))
+        # SPH priority via mixSet endpoint, type=mix_energy_priority: 0=load first, 1=battery first, 2=grid first
+        result = self._api.sph_write_parameter(self._serial, "mix_energy_priority", str(priority))
         log.info("Growatt priority set to %d, response: %s", priority, result)
 
     def set_ac_charge_times(
