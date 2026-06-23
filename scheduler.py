@@ -90,8 +90,6 @@ def main() -> None:
 
     history.init_db()
     growatt = GrowattClient()
-    if not cfg.dry_run:
-        growatt.initialize()  # Clear stale TOU windows from any prior run
     amber = AmberClient()
     weather_client = WeatherClient()
 

@@ -57,7 +57,7 @@ class GrowattClient:
         self._api.server_url = cfg.growatt_server
         self._api.api_url = cfg.growatt_server + "v1/"
         self._serial = cfg.sph_serial
-        self._tou_state = None  # None | "dispatch" | "charge"
+        self._tou_state = None  # None = unknown (post-startup) | "clear" | "dispatch" | "charge"
 
     def get_state(self) -> InverterState:
         detail = self._api.sph_detail(self._serial)
@@ -86,16 +86,6 @@ class GrowattClient:
             echarge_today=float(energy.get("echarge1Today", 0)),
             edischarge_today=float(energy.get("edischarge1Today", 0)),
         )
-
-    def initialize(self) -> None:
-        """Clear any stale TOU windows left by a prior run."""
-        try:
-            self._api.sph_write_ac_discharge_times(self._serial, 100, 10, _EMPTY_PERIODS)
-            self._api.sph_write_ac_charge_times(self._serial, 100, 100, False, _EMPTY_PERIODS)
-            log.info("TOU tables cleared on startup")
-        except Exception as e:
-            log.warning("TOU table clear on startup failed (non-fatal): %s", e)
-        self._tou_state = None
 
     def set_tou_dispatch(self, stop_soc: int = 40, power_pct: int = 100) -> None:
         """Enable battery→grid discharge for the next poll window (~12 min)."""
@@ -131,12 +121,17 @@ class GrowattClient:
 
     def clear_tou(self) -> None:
         """Disable all TOU windows — inverter operates in Battery First base mode."""
+        if self._tou_state == "clear":
+            return  # Already confirmed clear, skip API calls
         if self._tou_state is None:
-            return  # Already clear, skip API calls
-        if self._tou_state == "dispatch":
+            # Unknown state post-startup — clear both tables in case anything is active
+            r1 = self._api.sph_write_ac_discharge_times(self._serial, 100, 10, _EMPTY_PERIODS)
+            r2 = self._api.sph_write_ac_charge_times(self._serial, 100, 100, False, _EMPTY_PERIODS)
+            log.info("TOU cleared (prior state unknown) discharge=%s charge=%s", r1, r2)
+        elif self._tou_state == "dispatch":
             result = self._api.sph_write_ac_discharge_times(self._serial, 100, 10, _EMPTY_PERIODS)
             log.info("TOU dispatch cleared response=%s", result)
         elif self._tou_state == "charge":
             result = self._api.sph_write_ac_charge_times(self._serial, 100, 100, False, _EMPTY_PERIODS)
             log.info("TOU charge cleared response=%s", result)
-        self._tou_state = None
+        self._tou_state = "clear"
