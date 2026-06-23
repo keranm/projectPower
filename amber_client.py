@@ -42,7 +42,9 @@ class AmberClient:
             if r is None:
                 continue
             # channel_type is an enum; .value gives the string
-            channel = getattr(r.channel_type, "value", r.channel_type)
+            channel_raw = getattr(r.channel_type, "value", r.channel_type)
+            # Amber SDK uses camelCase "feedIn"; normalise to snake_case internally
+            channel = "feed_in" if channel_raw == "feedIn" else channel_raw
             if channel not in ("general", "feed_in"):
                 continue
             descriptor = getattr(r.descriptor, "value", str(r.descriptor)).lower()

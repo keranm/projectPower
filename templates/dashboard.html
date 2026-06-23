@@ -459,20 +459,19 @@
     // Build feed-in lookup by start_time
     const fiMap={};
     (fiIntervals||[]).forEach(p => fiMap[p.start_time]=p.per_kwh);
-    const blocks=[]; let cur=null;
-    for (const iv of intervals) {
-      if (!cur||cur.descriptor!==iv.descriptor) { cur={...iv,count:1,fi:fiMap[iv.start_time]}; blocks.push(cur); }
-      else { cur.count++; cur.end_time=iv.end_time; }
-    }
-    const maxP=Math.max(...intervals.map(p=>p.per_kwh),1);
-    el.innerHTML=blocks.map(b=>`
-      <div class="fc-row">
+    // Show next 6 individual slots (no grouping)
+    const slots = intervals.slice(0, 6);
+    const maxP = Math.max(...slots.map(p=>p.per_kwh), 1);
+    el.innerHTML = slots.map(b => {
+      const fi = fiMap[b.start_time];
+      return `<div class="fc-row">
         <span class="fc-time">${fmtTime(b.start_time)}</span>
         <div class="fc-bar-track"><div class="fc-bar-fill bar-${b.descriptor}" style="width:${Math.max(4,(b.per_kwh/maxP)*100).toFixed(1)}%"></div></div>
         <span class="fc-price">${b.per_kwh.toFixed(1)}c</span>
         <span class="fc-badge p-${b.descriptor}">${PRICE_LABELS[b.descriptor]??b.descriptor}</span>
-        ${b.fi!=null?`<span style="font-family:'JetBrains Mono',monospace;font-size:.6rem;color:#10b981;flex-shrink:0">↑${b.fi.toFixed(1)}c</span>`:''}
-      </div>`).join('');
+        ${fi!=null?`<span style="font-family:'JetBrains Mono',monospace;font-size:.6rem;color:#10b981;flex-shrink:0;width:2.5rem;text-align:right">↑${fi.toFixed(1)}c</span>`:''}
+      </div>`;
+    }).join('');
   }
 
   function renderOverride() {
