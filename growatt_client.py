@@ -74,12 +74,9 @@ class GrowattClient:
         )
 
     def set_priority(self, priority: int) -> None:
-        # TODO: confirm the correct OpenApiV1 method for setting priorityChoose.
-        # Candidates: check growattServer source for sph_set_priority or similar.
-        # The TOU schedule write calls below may be sufficient for controlling behaviour.
-        raise NotImplementedError(
-            "set_priority write call not yet confirmed — check growattServer OpenApiV1 source"
-        )
+        # SPH priority via mixSet endpoint, type=pbd: 0=load first, 1=battery first, 2=grid first
+        result = self._api.sph_write_parameter(self._serial, "pbd", str(priority))
+        log.info("Growatt priority set to %d, response: %s", priority, result)
 
     def set_ac_charge_times(
         self,
