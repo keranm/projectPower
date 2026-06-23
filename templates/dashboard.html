@@ -159,7 +159,7 @@
         <div style="position:relative;width:192px;height:192px">
           <svg viewBox="0 0 192 192" width="192" height="192" style="overflow:visible">
             <path class="gauge-track" d="M 40.84 40.84 A 78 78 0 1 0 151.16 40.84"/>
-            <path id="gauge-fill" class="gauge-fill" stroke="#10b981" d="M 40.84 40.84 A 78 78 0 0 1 40.84 40.84"/>
+            <path id="gauge-fill" class="gauge-fill" stroke="#10b981" d="M 40.84 40.84 A 78 78 0 0 0 40.84 40.84"/>
           </svg>
           <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">
             <span id="soc" class="gauge-pct" style="color:#10b981">–</span>
@@ -229,36 +229,41 @@
       </div>
     </div>
 
-    <!-- Buy Price -->
+    <!-- Buy Price + Forecast -->
     <div class="card">
       <div class="card-label">Buy Price</div>
-      <div style="display:flex;align-items:baseline;gap:.5rem;margin-bottom:.625rem">
+      <div style="display:flex;align-items:baseline;gap:.5rem;margin-bottom:.5rem">
         <span id="price-kwh" class="price-num">–</span>
         <span style="font-size:.875rem;color:var(--text-2);font-weight:500">c/kWh</span>
       </div>
       <span id="price-badge" class="price-descriptor">–</span>
-      <div class="price-bar-track"><div id="price-bar" class="price-bar-fill" style="width:5%"></div></div>
+      <div class="price-bar-track" style="margin:.625rem 0"><div id="price-bar" class="price-bar-fill" style="width:5%"></div></div>
+      <div class="card-label" style="margin-bottom:.375rem;margin-top:.25rem">Upcoming</div>
+      <div id="buy-forecast"></div>
     </div>
 
-    <!-- Sell / Feed-in Price -->
+    <!-- Sell / Feed-in + Forecast -->
     <div class="card">
       <div class="card-label">Sell / Feed-in</div>
-      <div style="display:flex;align-items:baseline;gap:.5rem;margin-bottom:.625rem">
-        <span id="feedin-kwh" class="price-num" style="color:#10b981">–</span>
+      <div style="display:flex;align-items:baseline;gap:.5rem;margin-bottom:.5rem">
+        <span id="feedin-kwh" class="price-num">–</span>
         <span style="font-size:.875rem;color:var(--text-2);font-weight:500">c/kWh</span>
       </div>
-      <span id="feedin-badge" class="price-descriptor" style="background:rgba(16,185,129,.12);color:#10b981">–</span>
-      <div class="price-bar-track"><div id="feedin-bar" class="price-bar-fill" style="width:5%;background:#10b981"></div></div>
+      <span id="feedin-badge" class="price-descriptor">–</span>
+      <div class="price-bar-track" style="margin:.625rem 0"><div id="feedin-bar" class="price-bar-fill" style="width:5%"></div></div>
+      <div class="card-label" style="margin-bottom:.375rem;margin-top:.25rem">Upcoming</div>
+      <div id="sell-forecast"></div>
     </div>
 
-    <!-- Price Forecast -->
+    <!-- System Decision (fills col 3 of the price row) -->
     <div class="card">
-      <div class="card-label">Price Forecast</div>
-      <div id="forecast"></div>
+      <div class="card-label">System Decision</div>
+      <p id="decision-action" class="decision-action">–</p>
+      <p id="decision-reason" class="decision-reason">–</p>
     </div>
 
-    <!-- Weather -->
-    <div class="card col-span-2" id="weather-card">
+    <!-- Weather (full width) -->
+    <div class="card col-span-3" id="weather-card">
       <div class="card-label">Weather — <span id="wx-place">–</span></div>
       <div style="display:flex;align-items:flex-end;gap:.875rem;margin-bottom:.625rem">
         <span id="wx-temp" class="wx-temp-num">–</span>
@@ -281,13 +286,6 @@
       <div class="card-label" style="margin-bottom:.5rem">Next 6 Hours</div>
       <div id="wx-hourly" class="wx-hourly"></div>
       <p id="wx-trend" style="font-size:.75rem;color:var(--text-2);margin-top:.75rem;line-height:1.55">–</p>
-    </div>
-
-    <!-- System Decision -->
-    <div class="card">
-      <div class="card-label">System Decision</div>
-      <p id="decision-action" class="decision-action">–</p>
-      <p id="decision-reason" class="decision-reason">–</p>
     </div>
 
     <!-- Override -->
@@ -348,8 +346,9 @@
   function gaugePath(soc) {
     if (soc <= 0) return `M ${CX} ${CY}`;
     const sweep = (Math.min(soc, 100) / 100) * 270;
-    const [x1,y1] = arcPoint(225), [x2,y2] = arcPoint(225 + sweep);
-    return `M ${x1.toFixed(2)} ${y1.toFixed(2)} A ${R} ${R} 0 ${sweep > 180 ? 1 : 0} 1 ${x2.toFixed(2)} ${y2.toFixed(2)}`;
+    // CCW (sweep=0) so fill follows the same direction as the track
+    const [x1,y1] = arcPoint(225), [x2,y2] = arcPoint(225 - sweep);
+    return `M ${x1.toFixed(2)} ${y1.toFixed(2)} A ${R} ${R} 0 ${sweep > 180 ? 1 : 0} 0 ${x2.toFixed(2)} ${y2.toFixed(2)}`;
   }
   function socColor(s) { return s >= 70 ? '#10b981' : s >= 40 ? '#f59e0b' : '#ef4444'; }
   function fmtW(w) { const a=Math.abs(w); return a>=1000?(a/1000).toFixed(1)+' kW':Math.round(a)+' W'; }
@@ -413,12 +412,20 @@
       bar.style.width=Math.max(5,Math.min(100,(cur.per_kwh/40)*100)).toFixed(0)+'%';
     }
     if (curFI) {
-      document.getElementById('feedin-kwh').textContent = curFI.per_kwh.toFixed(1);
-      document.getElementById('feedin-badge').textContent = curFI.per_kwh >= 0
-        ? (PRICE_LABELS[curFI.descriptor] ?? curFI.descriptor)
-        : 'Negative';
+      const fiEl = document.getElementById('feedin-kwh');
+      fiEl.textContent = curFI.per_kwh.toFixed(1);
+      fiEl.style.color = curFI.per_kwh >= 0 ? '#10b981' : 'var(--orange)';
+      const fiBadge = document.getElementById('feedin-badge');
+      if (curFI.per_kwh >= 0) {
+        fiBadge.textContent = PRICE_LABELS[curFI.descriptor] ?? curFI.descriptor;
+        fiBadge.style.cssText = 'background:rgba(16,185,129,.12);color:#10b981;margin-top:.4rem';
+      } else {
+        fiBadge.textContent = 'Cost to export';
+        fiBadge.style.cssText = 'background:rgba(249,115,22,.12);color:var(--orange);margin-top:.4rem';
+      }
       const fiBar = document.getElementById('feedin-bar');
-      fiBar.style.width = Math.max(5, Math.min(100, (Math.max(0, curFI.per_kwh) / 30) * 100)).toFixed(0) + '%';
+      fiBar.style.background = curFI.per_kwh >= 0 ? '#10b981' : 'var(--orange)';
+      fiBar.style.width = Math.max(5, Math.min(100, (Math.abs(curFI.per_kwh) / 30) * 100)).toFixed(0) + '%';
     }
 
     document.getElementById('decision-action').textContent = ACTION_LABELS[decision.action]??decision.action??'–';
@@ -429,7 +436,8 @@
     document.getElementById('today-export').textContent = (inv.eexport_today??0).toFixed(1);
 
     renderWeather(data.weather);
-    renderForecast(general.filter(p => p.is_forecast), feedin.filter(p => p.is_forecast));
+    renderPriceForecast('buy-forecast',  general.filter(p => p.is_forecast));
+    renderPriceForecast('sell-forecast', feedin.filter(p => p.is_forecast));
     renderOverride();
     renderDuration(selectedDuration);
   }
@@ -453,23 +461,41 @@
     ).join('');
   }
 
-  function renderForecast(intervals, fiIntervals) {
-    const el=document.getElementById('forecast');
-    if (!intervals.length) { el.innerHTML='<p style="font-size:.8125rem;color:var(--text-3)">No forecast data</p>'; return; }
-    // Build feed-in lookup by start_time
-    const fiMap={};
-    (fiIntervals||[]).forEach(p => fiMap[p.start_time]=p.per_kwh);
-    // Show next 6 individual slots (no grouping)
-    const slots = intervals.slice(0, 6);
-    const maxP = Math.max(...slots.map(p=>p.per_kwh), 1);
-    el.innerHTML = slots.map(b => {
-      const fi = fiMap[b.start_time];
-      return `<div class="fc-row">
-        <span class="fc-time">${fmtTime(b.start_time)}</span>
-        <div class="fc-bar-track"><div class="fc-bar-fill bar-${b.descriptor}" style="width:${Math.max(4,(b.per_kwh/maxP)*100).toFixed(1)}%"></div></div>
-        <span class="fc-price">${b.per_kwh.toFixed(1)}c</span>
-        <span class="fc-badge p-${b.descriptor}">${PRICE_LABELS[b.descriptor]??b.descriptor}</span>
-        ${fi!=null?`<span style="font-family:'JetBrains Mono',monospace;font-size:.6rem;color:#10b981;flex-shrink:0;width:2.5rem;text-align:right">↑${fi.toFixed(1)}c</span>`:''}
+  function ivMinutes(p) {
+    return Math.round((new Date(p.end_time) - new Date(p.start_time)) / 60000);
+  }
+
+  function renderPriceForecast(elId, intervals) {
+    const el = document.getElementById(elId);
+    if (!intervals.length) { el.innerHTML = '<p style="font-size:.75rem;color:var(--text-3)">No data</p>'; return; }
+
+    const fiveMin   = intervals.filter(p => ivMinutes(p) <= 7).slice(0, 3);
+    let   thirtyMin = intervals.filter(p => ivMinutes(p) >= 25).slice(0, 2);
+
+    // If Amber returns all 5-min intervals, synthesise 30-min blocks from further out
+    if (!thirtyMin.length) {
+      const all5 = intervals.filter(p => ivMinutes(p) <= 7);
+      for (let i = 12; i < all5.length && thirtyMin.length < 2; i += 6) {
+        thirtyMin.push(all5[i]);
+      }
+    }
+
+    const rows = [
+      ...fiveMin.map(p => ({...p, _tag: '5m'})),
+      ...thirtyMin.map(p => ({...p, _tag: '30m'})),
+    ];
+
+    el.innerHTML = rows.map((p, i) => {
+      const isSell = elId === 'sell-forecast';
+      const neg = p.per_kwh < 0;
+      const priceColor = isSell ? (neg ? 'var(--orange)' : '#10b981') : 'var(--text-1)';
+      const divider = (i > 0 && p._tag === '30m' && rows[i-1]._tag === '5m')
+        ? '<div style="height:1px;background:var(--border-sub);margin:.25rem 0"></div>' : '';
+      return `${divider}<div style="display:flex;align-items:center;gap:.5rem;padding:.3rem 0">
+        <span class="fc-time">${fmtTime(p.start_time)}</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:.75rem;font-weight:600;color:${priceColor};width:2.75rem;text-align:right;flex-shrink:0">${p.per_kwh.toFixed(1)}c</span>
+        <span class="fc-badge p-${p.descriptor}">${PRICE_LABELS[p.descriptor]??p.descriptor}</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:.5rem;color:var(--text-3);flex-shrink:0">${p._tag}</span>
       </div>`;
     }).join('');
   }
