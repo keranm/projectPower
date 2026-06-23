@@ -7,739 +7,490 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="McNutty Energy">
   <title>McNutty Energy</title>
-  <link rel="stylesheet" href="/static/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
-    /* ── Design tokens ──────────────────────────────────────────────────────── */
-    :root {
-      --sat: env(safe-area-inset-top);
-      --sab: env(safe-area-inset-bottom);
-    }
-
+    :root { --sat: env(safe-area-inset-top); --sab: env(safe-area-inset-bottom); }
     [data-theme="dark"] {
-      --bg:          #020617;
-      --surface:     #0f172a;
-      --border:      #1e293b;
-      --well:        #1e293b;
-      --text-1:      #f1f5f9;
-      --text-2:      #94a3b8;
-      --text-3:      #475569;
-      --divider:     #1e293b;
-      --track-off:   #334155;
-      --track-on:    #3b82f6;
-      --thumb:       #f1f5f9;
-      --btn-active-bg:   #f1f5f9;
-      --btn-active-text: #020617;
-      --btn-idle-bg:     #1e293b;
-      --btn-idle-text:   #64748b;
-      --dur-active-bg:   #334155;
-      --dur-active-text: #f1f5f9;
-      --dur-idle-bg:     #0f172a;
-      --dur-idle-text:   #475569;
-      --dur-idle-border: #1e293b;
+      --bg:#070c18; --surface:#0d1626; --elevated:#13203a; --border:#1c2f4a; --border-sub:#111e30;
+      --text-1:#e2eaf8; --text-2:#6b88aa; --text-3:#334d6a;
+      --accent:#4f8ef7; --accent-dim:rgba(79,142,247,0.12);
+      --green:#10b981; --amber-c:#f59e0b; --orange:#f97316; --red:#ef4444;
     }
-
     [data-theme="light"] {
-      --bg:          #f0f4f8;
-      --surface:     #ffffff;
-      --border:      #e2e8f0;
-      --well:        #e8edf3;
-      --text-1:      #1e293b;
-      --text-2:      #64748b;
-      --text-3:      #94a3b8;
-      --divider:     #e2e8f0;
-      --track-off:   #cbd5e1;
-      --track-on:    #3b82f6;
-      --thumb:       #ffffff;
-      --btn-active-bg:   #1e293b;
-      --btn-active-text: #f1f5f9;
-      --btn-idle-bg:     #f1f5f9;
-      --btn-idle-text:   #64748b;
-      --dur-active-bg:   #334155;
-      --dur-active-text: #f1f5f9;
-      --dur-idle-bg:     #ffffff;
-      --dur-idle-text:   #64748b;
-      --dur-idle-border: #e2e8f0;
+      --bg:#eef2f9; --surface:#ffffff; --elevated:#f4f7fd; --border:#dce4f0; --border-sub:#eaf0f9;
+      --text-1:#0d1626; --text-2:#4a6080; --text-3:#9ab0c8;
+      --accent:#3b7de8; --accent-dim:rgba(59,125,232,0.1);
+      --green:#059669; --amber-c:#d97706; --orange:#ea580c; --red:#dc2626;
     }
-
-    /* ── Base ───────────────────────────────────────────────────────────────── */
-    body {
-      -webkit-tap-highlight-color: transparent;
-      background: var(--bg);
-      color: var(--text-1);
-      transition: background 0.25s, color 0.25s;
-    }
-
-    /* ── Components ─────────────────────────────────────────────────────────── */
-    .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 1rem;
-      padding: 1.25rem;
-      transition: background 0.25s, border-color 0.25s;
-    }
-
-    .well  { background: var(--well); }
-    .t1    { color: var(--text-1); }
-    .t2    { color: var(--text-2); }
-    .t3    { color: var(--text-3); }
-    .label { color: var(--text-3); font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.1em; }
-    .div-line { border-color: var(--divider); }
-
-    /* ── Toggle switch ──────────────────────────────────────────────────────── */
-    .switch {
-      position: relative;
-      width: 2.5rem;
-      height: 1.5rem;
-      border-radius: 9999px;
-      background: var(--track-off);
-      transition: background 0.25s;
-      cursor: pointer;
-      border: none;
-      outline: none;
-      flex-shrink: 0;
-    }
-    .switch.on { background: var(--track-on); }
-    .switch-thumb {
-      position: absolute;
-      top: 3px;
-      left: 3px;
-      width: 1.125rem;
-      height: 1.125rem;
-      border-radius: 50%;
-      background: var(--thumb);
-      box-shadow: 0 1px 4px rgba(0,0,0,0.3);
-      transition: transform 0.25s cubic-bezier(.4,0,.2,1), background 0.25s;
-    }
-    .switch.on .switch-thumb { transform: translateX(1rem); }
-
-    /* ── Price colours ──────────────────────────────────────────────────────── */
-    .p-extremely_low { background:#065f46; color:#6ee7b7; }
-    .p-very_low      { background:#14532d; color:#86efac; }
-    .p-low           { background:#1a2e05; color:#bef264; }
-    .p-neutral       { background:#451a03; color:#fcd34d; }
-    .p-high          { background:#431407; color:#fb923c; }
-    .p-spike         { background:#450a0a; color:#f87171; }
-
-    .bar-extremely_low { background:#10b981; }
-    .bar-very_low      { background:#22c55e; }
-    .bar-low           { background:#a3e635; }
-    .bar-neutral       { background:#fbbf24; }
-    .bar-high          { background:#f97316; }
-    .bar-spike         { background:#ef4444; }
-
-    /* ── Override buttons ───────────────────────────────────────────────────── */
-    .btn-active {
-      background: var(--btn-active-bg);
-      color: var(--btn-active-text);
-    }
-    .btn-idle {
-      background: var(--btn-idle-bg);
-      color: var(--btn-idle-text);
-    }
-    .btn-active:active, .btn-idle:active { opacity: 0.7; }
-
-    .dur-active {
-      background: var(--dur-active-bg);
-      color: var(--dur-active-text);
-    }
-    .dur-idle {
-      background: var(--dur-idle-bg);
-      color: var(--dur-idle-text);
-      border: 1px solid var(--dur-idle-border);
-    }
-
-    /* ── Stale blink ────────────────────────────────────────────────────────── */
-    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
-    .stale { animation: blink 2s infinite; }
-
-    /* ── Bottom nav ─────────────────────────────────────────────────────────── */
-    .bottom-nav {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      background: var(--surface);
-      border-top: 1px solid var(--border);
-      padding-bottom: var(--sab);
-      transition: background 0.25s, border-color 0.25s;
-      z-index: 100;
-    }
-    .nav-tab {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 0.5rem 0;
-      gap: 0.125rem;
-      color: var(--text-3);
-      text-decoration: none;
-      font-size: 0.625rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      transition: color 0.2s;
-    }
-    .nav-tab.active { color: var(--text-1); }
-    .nav-tab .nav-icon { font-size: 1.25rem; line-height: 1; }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100dvh;overflow-x:hidden;transition:background .3s,color .3s}
+    a{text-decoration:none;color:inherit}
+    button{font-family:inherit;cursor:pointer;border:none;outline:none}
+    .header{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--bg) 85%,transparent);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-bottom:1px solid var(--border-sub);padding:max(1rem,var(--sat)) 1.25rem .875rem}
+    .header-inner{max-width:1280px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:1rem}
+    .logo{display:flex;align-items:center;gap:.625rem}
+    .logo-mark{width:30px;height:30px;border-radius:8px;flex-shrink:0;background:linear-gradient(135deg,#4f8ef7 0%,#0ea5e9 100%);display:flex;align-items:center;justify-content:center;box-shadow:0 0 14px rgba(79,142,247,.35)}
+    .logo-name{font-size:.9375rem;font-weight:700;letter-spacing:-.025em;color:var(--text-1)}
+    .logo-sub{font-size:.625rem;color:var(--text-3);letter-spacing:.05em;text-transform:uppercase;margin-top:.1rem}
+    .header-right{display:flex;align-items:center;gap:.75rem}
+    .status-pill{display:flex;align-items:center;gap:.4rem;background:var(--surface);border:1px solid var(--border);border-radius:9999px;padding:.3rem .75rem;font-size:.6875rem;font-weight:600;color:var(--text-2);letter-spacing:.02em}
+    .status-dot{width:6px;height:6px;border-radius:50%;background:var(--text-3);transition:background .5s}
+    .status-dot.live{background:var(--green);box-shadow:0 0 6px var(--green)}
+    .status-dot.stale{background:var(--red);animation:blink 2s infinite}
+    .theme-btn{width:34px;height:34px;border-radius:50%;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--text-2);transition:background .2s}
+    .theme-btn:hover{background:var(--elevated)}
+    .main{max-width:1280px;margin:0 auto;padding:1.125rem 1rem calc(4.5rem + var(--sab))}
+    @media(min-width:640px){.main{padding:1.375rem 1.25rem calc(4.5rem + var(--sab))}}
+    @media(min-width:1024px){.main{padding:1.75rem 1.75rem 2rem}}
+    .grid{display:grid;gap:.875rem;grid-template-columns:1fr}
+    @media(min-width:640px){.grid{grid-template-columns:1fr 1fr;gap:1rem}}
+    @media(min-width:1024px){.grid{grid-template-columns:repeat(3,1fr);gap:1.125rem}.col-span-2{grid-column:span 2}}
+    .card{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:1.125rem 1.25rem;transition:border-color .2s}
+    .card-label{font-size:.625rem;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--text-3);margin-bottom:.875rem}
+    .pill-cell{background:var(--elevated);border:1px solid var(--border-sub);border-radius:12px;padding:.75rem .875rem}
+    .pill-label{font-size:.5625rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text-3);margin-bottom:.3rem}
+    .pill-value{font-family:'JetBrains Mono',monospace;font-size:1.25rem;font-weight:600;color:var(--text-1);line-height:1}
+    .pill-unit{font-size:.6875rem;color:var(--text-3);margin-left:.15em}
+    .gauge-wrap{display:flex;align-items:center;justify-content:center;padding:.375rem 0 .875rem}
+    .gauge-track{fill:none;stroke:var(--elevated);stroke-width:14;stroke-linecap:round}
+    .gauge-fill{fill:none;stroke-width:14;stroke-linecap:round;transition:stroke .5s}
+    .gauge-pct{font-family:'JetBrains Mono',monospace;font-size:2.75rem;font-weight:600;letter-spacing:-.04em;line-height:1}
+    .gauge-sub{font-size:.75rem;color:var(--text-2);margin-top:.25rem}
+    .flow-svg{width:100%;overflow:visible}
+    .flow-node-bg{fill:var(--elevated);stroke:var(--border);stroke-width:1.5}
+    .flow-node-lbl{fill:var(--text-3);font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:600;letter-spacing:.04em;text-transform:uppercase}
+    .flow-node-val{fill:var(--text-1);font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600}
+    .flow-path{fill:none;stroke-width:2.5;stroke-linecap:round}
+    .price-num{font-family:'JetBrains Mono',monospace;font-size:3rem;font-weight:600;letter-spacing:-.04em;line-height:1}
+    .price-descriptor{display:inline-flex;align-items:center;font-size:.6875rem;font-weight:700;letter-spacing:.05em;padding:.3rem .75rem;border-radius:9999px}
+    .p-extremely_low{background:rgba(16,185,129,.14);color:#10b981}
+    .p-very_low{background:rgba(34,197,94,.14);color:#22c55e}
+    .p-low{background:rgba(163,230,53,.14);color:#a3e635}
+    .p-neutral{background:rgba(251,191,36,.14);color:#fbbf24}
+    .p-high{background:rgba(249,115,22,.14);color:#f97316}
+    .p-spike{background:rgba(239,68,68,.18);color:#f87171}
+    .bar-extremely_low{background:#10b981}.bar-very_low{background:#22c55e}.bar-low{background:#a3e635}
+    .bar-neutral{background:#fbbf24}.bar-high{background:#f97316}.bar-spike{background:#ef4444}
+    .price-bar-track{height:4px;background:var(--elevated);border-radius:9999px;overflow:hidden;margin:.875rem 0}
+    .price-bar-fill{height:100%;border-radius:9999px;transition:width .5s,background .5s}
+    .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:.625rem}
+    .stat-cell{background:var(--elevated);border:1px solid var(--border-sub);border-radius:12px;padding:.875rem}
+    .stat-icon{width:26px;height:26px;margin-bottom:.5rem}
+    .stat-num{font-family:'JetBrains Mono',monospace;font-size:1.5rem;font-weight:600;letter-spacing:-.025em;line-height:1;margin-bottom:.2rem}
+    .stat-lbl{font-size:.5625rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text-3)}
+    .wx-temp-num{font-family:'JetBrains Mono',monospace;font-size:2.75rem;font-weight:600;letter-spacing:-.04em;line-height:1}
+    .wx-hourly{display:flex;gap:.4rem}
+    .wx-hour{flex:1;background:var(--elevated);border-radius:9px;padding:.5rem .25rem;text-align:center}
+    .fc-row{display:flex;align-items:center;gap:.6rem;padding:.4rem 0}
+    .fc-time{font-family:'JetBrains Mono',monospace;font-size:.6875rem;color:var(--text-3);width:2.75rem;flex-shrink:0}
+    .fc-bar-track{flex:1;height:5px;background:var(--elevated);border-radius:9999px;overflow:hidden}
+    .fc-bar-fill{height:100%;border-radius:9999px}
+    .fc-price{font-family:'JetBrains Mono',monospace;font-size:.6875rem;color:var(--text-2);width:2.25rem;text-align:right;flex-shrink:0}
+    .fc-badge{font-size:.5625rem;font-weight:700;letter-spacing:.04em;padding:.2rem .625rem;border-radius:9999px;width:5.5rem;text-align:center;flex-shrink:0}
+    .override-grid{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:.875rem}
+    .ovr-btn{display:flex;align-items:center;justify-content:center;gap:.4rem;padding:.8rem .75rem;border-radius:12px;font-size:.75rem;font-weight:600;background:var(--elevated);border:1px solid var(--border);color:var(--text-2);transition:all .15s}
+    .ovr-btn:active{transform:scale(.97)}
+    .ovr-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 0 0 3px var(--accent-dim)}
+    .dur-row{display:flex;gap:.4rem}
+    .dur-btn{flex:1;padding:.45rem;border-radius:8px;font-size:.6875rem;font-weight:600;font-family:'JetBrains Mono',monospace;background:var(--elevated);border:1px solid var(--border);color:var(--text-3);transition:all .15s}
+    .dur-btn.active{background:var(--accent-dim);border-color:var(--accent);color:var(--accent)}
+    .override-badge{display:inline-flex;align-items:center;gap:.35rem;font-size:.6875rem;font-weight:700;padding:.3rem .7rem;border-radius:9999px;background:rgba(245,158,11,.13);color:#f59e0b;border:1px solid rgba(245,158,11,.25)}
+    .decision-action{font-size:.9375rem;font-weight:600;color:var(--text-1);margin-bottom:.3rem}
+    .decision-reason{font-size:.8125rem;color:var(--text-2);line-height:1.55}
+    .divider{border:none;border-top:1px solid var(--border-sub);margin:.875rem 0}
+    .bottom-nav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:color-mix(in srgb,var(--surface) 90%,transparent);border-top:1px solid var(--border);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);padding:.5rem 2rem max(.625rem,var(--sab));display:flex}
+    @media(min-width:1024px){.bottom-nav{display:none}}
+    .nav-tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:.2rem;padding:.35rem;border-radius:10px;color:var(--text-3);font-size:.5625rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;transition:all .15s}
+    .nav-tab.active{color:var(--accent)}
+    .nav-icon{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+    @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes dash-fwd{to{stroke-dashoffset:-24}}
+    @keyframes dash-rev{to{stroke-dashoffset:24}}
+    .anim-fade-up{animation:fadeUp .45s ease both}
+    .flow-anim-fwd{stroke-dasharray:6 6;animation:dash-fwd .75s linear infinite}
+    .flow-anim-rev{stroke-dasharray:6 6;animation:dash-rev .75s linear infinite}
+    .flow-anim-off{stroke-dasharray:6 6;opacity:.35}
+    .hidden{display:none!important}
   </style>
 </head>
-<body class="min-h-screen font-sans antialiased">
-  <div class="max-w-md mx-auto px-4 space-y-3"
-       style="padding-top:max(1.25rem,var(--sat));padding-bottom:max(6rem,calc(4rem + var(--sab)))">
+<body>
 
-    <!-- Header -->
-    <div class="flex items-center justify-between py-1">
+<header class="header">
+  <div class="header-inner">
+    <div class="logo">
+      <div class="logo-mark">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      </div>
       <div>
-        <h1 class="text-base font-bold tracking-tight t1">McNutty Energy</h1>
-        <p id="last-updated" class="text-xs t3">Connecting…</p>
+        <div class="logo-name">McNutty Energy</div>
+        <div class="logo-sub" id="last-updated">Connecting…</div>
       </div>
-      <div class="flex items-center gap-3">
-        <!-- Theme toggle -->
-        <div class="flex items-center gap-2">
-          <span id="theme-icon" class="text-sm select-none">🌙</span>
-          <button id="theme-switch" class="switch" onclick="toggleTheme()" aria-label="Toggle light/dark mode">
-            <div class="switch-thumb"></div>
-          </button>
-          <span class="text-sm select-none">☀️</span>
+    </div>
+    <div class="header-right">
+      <div class="status-pill">
+        <div class="status-dot" id="status-dot"></div>
+        <span id="status-label">—</span>
+      </div>
+      <button class="theme-btn" onclick="toggleTheme()" aria-label="Toggle theme">
+        <svg id="icon-moon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        <svg id="icon-sun" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="hidden"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<div id="loading-state" class="main" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;gap:1rem">
+  <div style="width:36px;height:36px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite"></div>
+  <p style="color:var(--text-3);font-size:.875rem">Waiting for scheduler…</p>
+</div>
+
+<main class="main hidden anim-fade-up" id="dashboard">
+  <div class="grid">
+
+    <!-- Battery -->
+    <div class="card">
+      <div class="card-label">Battery</div>
+      <div class="gauge-wrap">
+        <div style="position:relative;width:192px;height:192px">
+          <svg viewBox="0 0 192 192" width="192" height="192" style="overflow:visible">
+            <path class="gauge-track" d="M 40.84 40.84 A 78 78 0 1 1 151.16 40.84"/>
+            <path id="gauge-fill" class="gauge-fill" stroke="#10b981" d="M 40.84 40.84 A 78 78 0 0 1 40.84 40.84"/>
+          </svg>
+          <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">
+            <span id="soc" class="gauge-pct" style="color:#10b981">–</span>
+            <span style="font-size:.75rem;color:var(--text-2);margin-top:.125rem">%</span>
+            <span id="status-text" class="gauge-sub">–</span>
+          </div>
         </div>
-        <div id="status-dot" class="w-2.5 h-2.5 rounded-full transition-colors duration-500" style="background:var(--well)"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.625rem">
+        <div class="pill-cell">
+          <div class="pill-label" id="batt-label">Battery</div>
+          <div class="pill-value"><span id="batt-pwr">–</span><span class="pill-unit">W</span></div>
+        </div>
+        <div class="pill-cell">
+          <div class="pill-label">Health</div>
+          <div class="pill-value"><span id="bms-soh">–</span><span class="pill-unit">%</span></div>
+        </div>
       </div>
     </div>
 
-    <!-- Loading -->
-    <div id="loading" class="text-center py-24 t3">
-      <div class="text-5xl mb-3">⚡</div>
-      <p class="text-sm">Waiting for scheduler…</p>
+    <!-- Power Flow -->
+    <div class="card">
+      <div class="card-label">Power Flow</div>
+      <svg class="flow-svg" viewBox="0 0 300 210" height="210">
+        <rect x="100" y="6"   width="100" height="50" rx="11" class="flow-node-bg"/>
+        <text x="150" y="25"  text-anchor="middle" class="flow-node-lbl">Solar</text>
+        <text x="150" y="47"  text-anchor="middle" class="flow-node-val" id="svg-ppv">– W</text>
+        <rect x="100" y="80"  width="100" height="50" rx="11" class="flow-node-bg"/>
+        <text x="150" y="99"  text-anchor="middle" class="flow-node-lbl">Home</text>
+        <text x="150" y="121" text-anchor="middle" class="flow-node-val" id="svg-pload">– W</text>
+        <rect x="10"  y="154" width="100" height="50" rx="11" class="flow-node-bg"/>
+        <text x="60"  y="173" text-anchor="middle" class="flow-node-lbl">Battery</text>
+        <text x="60"  y="195" text-anchor="middle" class="flow-node-val" id="svg-pbatt">–</text>
+        <rect x="190" y="154" width="100" height="50" rx="11" class="flow-node-bg"/>
+        <text x="240" y="173" text-anchor="middle" class="flow-node-lbl">Grid</text>
+        <text x="240" y="195" text-anchor="middle" class="flow-node-val" id="svg-pgrid">–</text>
+        <path id="p-solar-home" d="M 150 56 L 150 80"   class="flow-path flow-anim-fwd" stroke="#f59e0b"/>
+        <path id="p-home-batt"  d="M 120 130 L 80 154"  class="flow-path flow-anim-fwd" stroke="#10b981"/>
+        <path id="p-home-grid"  d="M 180 130 L 220 154" class="flow-path flow-anim-off" stroke="#6b88aa"/>
+      </svg>
     </div>
 
-    <!-- Main content -->
-    <div id="content" class="hidden space-y-3">
-
-      <!-- Battery -->
-      <div class="card">
-        <div class="flex items-end justify-between mb-4">
-          <div>
-            <p class="label mb-1">Battery</p>
-            <div class="flex items-baseline gap-1.5 leading-none">
-              <span id="soc" class="text-7xl font-black tabular-nums tracking-tighter t1">–</span>
-              <span class="text-3xl font-light t2">%</span>
-            </div>
-          </div>
-          <div class="text-right text-xs space-y-0.5 pb-1">
-            <p id="bms-soh" class="t3"></p>
-            <p id="status-text" class="t2"></p>
-          </div>
-        </div>
-        <div class="h-2.5 rounded-full overflow-hidden well">
-          <div id="soc-bar" class="h-full rounded-full transition-all duration-700" style="width:0%"></div>
-        </div>
+    <!-- Price + Decision -->
+    <div class="card">
+      <div class="card-label">Current Price</div>
+      <div style="display:flex;align-items:baseline;gap:.5rem;margin-bottom:.625rem">
+        <span id="price-kwh" class="price-num" style="font-family:'JetBrains Mono',monospace">–</span>
+        <span style="font-size:.875rem;color:var(--text-2);font-weight:500">c/kWh</span>
       </div>
-
-      <!-- Weather -->
-      <div class="card" id="weather-card">
-        <div class="flex items-start justify-between mb-3">
-          <div>
-            <p class="label mb-0.5">Weather</p>
-            <p id="wx-place" class="text-xs t2">–</p>
-          </div>
-          <div class="text-right">
-            <span id="wx-temp" class="text-2xl font-black tabular-nums t1">–</span>
-            <span class="t2 text-sm">°C</span>
-            <p id="wx-feels" class="text-xs t3 mt-0.5">–</p>
-          </div>
-        </div>
-
-        <div class="flex items-center gap-3 mb-3">
-          <span id="wx-icon" class="text-4xl leading-none">–</span>
-          <p id="wx-desc" class="font-semibold t1">–</p>
-        </div>
-
-        <div class="grid grid-cols-2 gap-2 mb-3">
-          <div class="rounded-xl p-3 well">
-            <p class="label mb-1">Cloud Cover</p>
-            <div class="flex items-baseline gap-1">
-              <span id="wx-cloud" class="text-xl font-bold t1">–</span>
-              <span class="text-xs t3">%</span>
-            </div>
-            <div class="mt-1.5 h-1.5 rounded-full overflow-hidden" style="background:var(--border)">
-              <div id="wx-cloud-bar" class="h-full rounded-full bg-slate-400 transition-all duration-500" style="width:0%"></div>
-            </div>
-          </div>
-          <div class="rounded-xl p-3 well">
-            <p class="label mb-1">Solar In</p>
-            <div class="flex items-baseline gap-1">
-              <span id="wx-solar" class="text-xl font-bold t1">–</span>
-              <span class="text-xs t3">W/m²</span>
-            </div>
-            <div class="mt-1.5 h-1.5 rounded-full overflow-hidden" style="background:var(--border)">
-              <div id="wx-solar-bar" class="h-full rounded-full transition-all duration-500" style="width:0%;background:#fbbf24"></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="border-t div-line pt-3">
-          <p class="label mb-2">Next 6 hours</p>
-          <div id="wx-hourly" class="flex gap-1 mb-2"></div>
-          <p id="wx-trend" class="text-xs t2 leading-snug">–</p>
-        </div>
-      </div>
-
-      <!-- Power flow 2×2 -->
-      <div class="grid grid-cols-2 gap-3">
-        <div class="card text-center py-4">
-          <div class="text-2xl mb-1">☀️</div>
-          <div id="ppv" class="text-xl font-bold tabular-nums t1">–</div>
-          <div class="text-xs t3 mt-0.5">Solar</div>
-        </div>
-        <div class="card text-center py-4">
-          <div class="text-2xl mb-1">💡</div>
-          <div id="pload" class="text-xl font-bold tabular-nums t1">–</div>
-          <div class="text-xs t3 mt-0.5">Using</div>
-        </div>
-        <div class="card text-center py-4">
-          <div class="text-2xl mb-1">🔋</div>
-          <div id="pcharge" class="text-xl font-bold tabular-nums t1">–</div>
-          <div id="pcharge-label" class="text-xs t3 mt-0.5">Battery</div>
-        </div>
-        <div class="card text-center py-4">
-          <div id="grid-icon" class="text-2xl mb-1">🏠</div>
-          <div id="pac" class="text-xl font-bold tabular-nums t1">–</div>
-          <div id="grid-label" class="text-xs t3 mt-0.5">Grid</div>
-        </div>
-      </div>
-
-      <!-- Price + Decision -->
-      <div class="card space-y-4">
-        <div>
-          <p class="label mb-2">Current Price</p>
-          <div class="flex items-center gap-3">
-            <span id="price-badge" class="text-xs font-semibold px-3 py-1.5 rounded-full">–</span>
-            <span id="price-kwh" class="text-3xl font-black tabular-nums t1">–</span>
-            <span class="t2 text-sm self-end pb-0.5">c/kWh</span>
-          </div>
-        </div>
-        <div class="border-t div-line pt-4">
-          <p class="label mb-1.5">System is…</p>
-          <p id="decision-action" class="font-semibold text-base t1">–</p>
-          <p id="decision-reason" class="text-sm t2 mt-1 leading-snug">–</p>
-        </div>
-      </div>
-
-      <!-- Forecast -->
-      <div class="card">
-        <p class="label mb-3">Price Forecast</p>
-        <div id="forecast" class="space-y-2.5"></div>
-      </div>
-
-      <!-- Today's totals -->
-      <div class="card">
-        <p class="label mb-3">Today</p>
-        <div class="grid grid-cols-2 gap-2">
-          <div class="rounded-xl p-3 well">
-            <p class="label mb-1">☀️ Solar</p>
-            <span id="today-solar" class="text-xl font-bold t1">–</span>
-            <span class="text-xs t3"> kWh</span>
-          </div>
-          <div class="rounded-xl p-3 well">
-            <p class="label mb-1">💡 Used</p>
-            <span id="today-load" class="text-xl font-bold t1">–</span>
-            <span class="text-xs t3"> kWh</span>
-          </div>
-          <div class="rounded-xl p-3 well">
-            <p class="label mb-1">⬇ Imported</p>
-            <span id="today-import" class="text-xl font-bold t1">–</span>
-            <span class="text-xs t3"> kWh</span>
-          </div>
-          <div class="rounded-xl p-3 well">
-            <p class="label mb-1">⬆ Exported</p>
-            <span id="today-export" class="text-xl font-bold t1">–</span>
-            <span class="text-xs t3"> kWh</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Override -->
-      <div class="card">
-        <div class="flex items-center justify-between mb-3">
-          <p class="label">Override</p>
-          <div id="override-badge" class="hidden text-xs font-medium px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-400">
-            Manual active
-          </div>
-        </div>
-        <p id="override-expiry" class="hidden text-xs text-amber-400 mb-3"></p>
-
-        <div class="grid grid-cols-2 gap-2 mb-3">
-          <button id="btn-auto"    onclick="setOverride('auto')"              class="py-3.5 rounded-xl text-sm font-semibold transition-all">✦ Auto</button>
-          <button id="btn-load"    onclick="setOverride('set_load_first')"    class="py-3.5 rounded-xl text-sm font-semibold transition-all">⚖️ Normal</button>
-          <button id="btn-battery" onclick="setOverride('set_battery_first')" class="py-3.5 rounded-xl text-sm font-semibold transition-all">🔋 Charge</button>
-          <button id="btn-export"  onclick="setOverride('set_grid_first')"    class="py-3.5 rounded-xl text-sm font-semibold transition-all">⚡ Export</button>
-        </div>
-
-        <div>
-          <p class="text-xs t3 mb-2">Hold override for</p>
-          <div class="flex gap-2">
-            <button id="dur-1"   onclick="setDuration(1)"    class="flex-1 py-2 rounded-lg text-xs font-medium transition-all">1h</button>
-            <button id="dur-2"   onclick="setDuration(2)"    class="flex-1 py-2 rounded-lg text-xs font-medium transition-all">2h</button>
-            <button id="dur-4"   onclick="setDuration(4)"    class="flex-1 py-2 rounded-lg text-xs font-medium transition-all">4h</button>
-            <button id="dur-inf" onclick="setDuration(null)" class="flex-1 py-2 rounded-lg text-xs font-medium transition-all">∞</button>
-          </div>
-        </div>
-      </div>
-
-    </div><!-- /content -->
-  </div><!-- /container -->
-
-  <!-- Bottom navigation -->
-  <nav class="bottom-nav">
-    <div class="max-w-md mx-auto flex">
-      <a href="/"        class="nav-tab active"><span class="nav-icon">⚡</span>Live</a>
-      <a href="/history" class="nav-tab">        <span class="nav-icon">📊</span>History</a>
+      <span id="price-badge" class="price-descriptor">–</span>
+      <div class="price-bar-track"><div id="price-bar" class="price-bar-fill" style="width:10%"></div></div>
+      <hr class="divider">
+      <div class="card-label" style="margin-bottom:.5rem">System Decision</div>
+      <p id="decision-action" class="decision-action">–</p>
+      <p id="decision-reason" class="decision-reason">–</p>
     </div>
-  </nav>
 
-  <script>
-    // ── Theme ────────────────────────────────────────────────────────────────
-    const html = document.documentElement;
-
-    function applyTheme(theme) {
-      html.setAttribute('data-theme', theme);
-      const sw = document.getElementById('theme-switch');
-      if (theme === 'light') sw.classList.add('on'); else sw.classList.remove('on');
-      localStorage.setItem('theme', theme);
-    }
-
-    function toggleTheme() {
-      applyTheme(html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
-    }
-
-    // Initialise: saved pref → system pref → dark
-    (function initTheme() {
-      const saved  = localStorage.getItem('theme');
-      const system = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
-      applyTheme(saved ?? system);
-    })();
-
-    // ── State ────────────────────────────────────────────────────────────────
-    let selectedDuration = 2;
-    let currentOverride  = null;
-    let lastUpdated      = null;
-
-    // ── Labels ───────────────────────────────────────────────────────────────
-    const PRICE_LABELS = {
-      extremely_low: 'Extremely Low',
-      very_low:      'Very Low',
-      low:           'Low',
-      neutral:       'Neutral',
-      high:          'High',
-      spike:         '⚡ Spike',
-    };
-
-    const ACTION_LABELS = {
-      none:               'Doing nothing — all good',
-      set_load_first:     'Running in normal mode',
-      set_battery_first:  'Charging from grid',
-      set_grid_first:     'Exporting to grid',
-      enable_ac_charge:   'Pre-charging for heating',
-    };
-
-    // ── Helpers ──────────────────────────────────────────────────────────────
-    function fmtW(w) {
-      const abs = Math.abs(w);
-      return abs >= 1000 ? (abs / 1000).toFixed(1) + ' kW' : Math.round(abs) + ' W';
-    }
-
-    function socColor(soc) {
-      if (soc >= 70) return '#10b981';
-      if (soc >= 40) return '#fbbf24';
-      return '#ef4444';
-    }
-
-    function relTime(iso) {
-      const s = Math.floor((Date.now() - new Date(iso)) / 1000);
-      if (s < 60)   return `${s}s ago`;
-      if (s < 3600) return `${Math.floor(s / 60)}m ago`;
-      return `${Math.floor(s / 3600)}h ago`;
-    }
-
-    function fmtTime(iso) {
-      return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    }
-
-    // ── Render ───────────────────────────────────────────────────────────────
-    function render(data) {
-      document.getElementById('loading').classList.add('hidden');
-      document.getElementById('content').classList.remove('hidden');
-
-      lastUpdated     = data.updated;
-      const inv       = data.inverter  || {};
-      const prices    = data.prices    || [];
-      const decision  = data.decision  || {};
-      currentOverride = data.override  || null;
-
-      // Header timestamp + staleness
-      const staleMinutes = (Date.now() - new Date(data.updated)) / 60000;
-      const updEl = document.getElementById('last-updated');
-      updEl.textContent = `Updated ${relTime(data.updated)}`;
-      updEl.className   = staleMinutes > 10 ? 'text-xs text-red-400 stale' : 'text-xs t3';
-      document.getElementById('status-dot').style.background =
-        staleMinutes > 10 ? '#ef4444' : '#10b981';
-
-      // Battery
-      const soc = inv.soc ?? 0;
-      document.getElementById('soc').textContent = soc;
-      const bar = document.getElementById('soc-bar');
-      bar.style.width      = soc + '%';
-      bar.style.background = socColor(soc);
-      document.getElementById('bms-soh').textContent     = `SoH ${inv.bms_soh ?? '–'}%`;
-      document.getElementById('status-text').textContent = inv.status_text ?? '';
-
-      // Solar
-      document.getElementById('ppv').textContent = fmtW(inv.ppv ?? 0);
-
-      // House load
-      document.getElementById('pload').textContent = fmtW(inv.plocal_load ?? 0);
-
-      // Battery power (pcharge1 = charging, pdischarge1 = discharging)
-      const pch  = inv.pcharge1    ?? 0;
-      const pdis = inv.pdischarge1 ?? 0;
-      const pchEl    = document.getElementById('pcharge');
-      const pchLabel = document.getElementById('pcharge-label');
-      if (pdis > 50) {
-        pchEl.textContent   = '−' + fmtW(pdis);
-        pchEl.style.color   = '#f97316';
-        pchLabel.textContent = 'Discharging';
-      } else if (pch > 50) {
-        pchEl.textContent   = '+' + fmtW(pch);
-        pchEl.style.color   = '#10b981';
-        pchLabel.textContent = 'Charging';
-      } else {
-        pchEl.textContent   = '0 W';
-        pchEl.style.color   = 'var(--text-2)';
-        pchLabel.textContent = 'Battery';
-      }
-
-      // Grid
-      const pac     = inv.pac ?? 0;
-      const pacEl   = document.getElementById('pac');
-      const labelEl = document.getElementById('grid-label');
-      const iconEl  = document.getElementById('grid-icon');
-      if (pac > 100) {
-        pacEl.textContent   = fmtW(pac);
-        pacEl.style.color   = '#ef4444';
-        labelEl.textContent = 'Importing';
-        iconEl.textContent  = '🏠';
-      } else if (pac < -100) {
-        pacEl.textContent   = fmtW(pac);
-        pacEl.style.color   = '#10b981';
-        labelEl.textContent = 'Exporting';
-        iconEl.textContent  = '💰';
-      } else {
-        pacEl.textContent   = '0 W';
-        pacEl.style.color   = 'var(--text-2)';
-        labelEl.textContent = 'Grid';
-        iconEl.textContent  = '🏠';
-      }
-
-      // Current price
-      const cur = prices.find(p => !p.is_forecast);
-      if (cur) {
-        const badge     = document.getElementById('price-badge');
-        badge.textContent = PRICE_LABELS[cur.descriptor] ?? cur.descriptor;
-        badge.className   = `text-xs font-semibold px-3 py-1.5 rounded-full p-${cur.descriptor}`;
-        document.getElementById('price-kwh').textContent = cur.per_kwh.toFixed(1);
-      }
-
-      // Decision
-      document.getElementById('decision-action').textContent =
-        ACTION_LABELS[decision.action] ?? decision.action ?? '–';
-      document.getElementById('decision-reason').textContent = decision.reason ?? '–';
-
-      // Today's totals
-      document.getElementById('today-solar').textContent  = (inv.epv_today      ?? 0).toFixed(1);
-      document.getElementById('today-load').textContent   = (inv.eload_today    ?? 0).toFixed(1);
-      document.getElementById('today-import').textContent = (inv.eimport_today  ?? 0).toFixed(1);
-      document.getElementById('today-export').textContent = (inv.eexport_today  ?? 0).toFixed(1);
-
-      // Weather
-      renderWeather(data.weather);
-
-      // Forecast + override UI
-      renderForecast(prices.filter(p => p.is_forecast));
-      renderOverride();
-      renderDuration(selectedDuration);
-    }
-
-    function wxIcon(code) {
-      if (code === 0)  return '☀️';
-      if (code <= 1)   return '🌤️';
-      if (code <= 2)   return '⛅';
-      if (code <= 3)   return '☁️';
-      if (code <= 48)  return '🌫️';
-      if (code <= 67)  return '🌧️';
-      if (code <= 77)  return '❄️';
-      if (code <= 82)  return '🌦️';
-      return '⛈️';
-    }
-
-    function cloudBarColor(pct) {
-      if (pct < 30) return '#fbbf24';
-      if (pct < 70) return '#94a3b8';
-      return '#475569';
-    }
-
-    function fmtHour(iso) {
-      return new Date(iso).toLocaleTimeString([], { hour: 'numeric', hour12: true });
-    }
-
-    function renderWeather(wx) {
-      const card = document.getElementById('weather-card');
-      if (!wx) { card.classList.add('hidden'); return; }
-      card.classList.remove('hidden');
-
-      document.getElementById('wx-place').textContent  = wx.place_name;
-      document.getElementById('wx-temp').textContent   = wx.temperature.toFixed(1);
-      document.getElementById('wx-feels').textContent  = `Feels like ${wx.feels_like.toFixed(0)}°`;
-      document.getElementById('wx-icon').textContent   = wxIcon(wx.weather_code);
-      document.getElementById('wx-desc').textContent   = wx.weather_desc;
-      document.getElementById('wx-cloud').textContent  = wx.cloud_cover;
-      document.getElementById('wx-solar').textContent  = Math.round(wx.solar_radiation);
-      document.getElementById('wx-trend').textContent  = wx.trend;
-
-      const cloudBar = document.getElementById('wx-cloud-bar');
-      cloudBar.style.width      = wx.cloud_cover + '%';
-      cloudBar.style.background = cloudBarColor(wx.cloud_cover);
-
-      const solarBar = document.getElementById('wx-solar-bar');
-      solarBar.style.width = Math.min(100, (wx.solar_radiation / 1000) * 100).toFixed(1) + '%';
-
-      // Hourly blocks
-      const times   = wx.hourly_times   || [];
-      const codes   = wx.hourly_codes   || [];
-      const clouds  = wx.hourly_clouds  || [];
-      const rads    = wx.hourly_radiation || [];
-      document.getElementById('wx-hourly').innerHTML = times.map((t, i) => `
-        <div class="flex-1 text-center rounded-lg py-2 well">
-          <div class="text-base leading-none mb-1">${wxIcon(codes[i] ?? 0)}</div>
-          <div class="text-xs t3">${fmtHour(t)}</div>
-          <div class="text-xs font-medium mt-0.5 t2">${clouds[i] ?? '–'}%</div>
-          ${rads[i] > 0 ? `<div class="text-xs text-amber-400">${Math.round(rads[i])}W</div>` : ''}
+    <!-- Today -->
+    <div class="card">
+      <div class="card-label">Today</div>
+      <div class="stat-grid">
+        <div class="stat-cell">
+          <svg class="stat-icon" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+          <div class="stat-num" style="font-family:'JetBrains Mono',monospace" id="today-solar">–</div>
+          <div class="stat-lbl">Solar kWh</div>
         </div>
-      `).join('');
-    }
-
-    function renderForecast(intervals) {
-      const el = document.getElementById('forecast');
-      if (!intervals.length) {
-        el.innerHTML = '<p class="text-sm t3">No forecast data</p>';
-        return;
-      }
-
-      // Merge consecutive same-descriptor intervals into blocks
-      const blocks = [];
-      let cur = null;
-      for (const iv of intervals) {
-        if (!cur || cur.descriptor !== iv.descriptor) {
-          cur = { ...iv, count: 1 };
-          blocks.push(cur);
-        } else {
-          cur.count++;
-          cur.end_time = iv.end_time;
-        }
-      }
-
-      const maxPrice = Math.max(...intervals.map(p => p.per_kwh), 1);
-
-      el.innerHTML = blocks.map(b => `
-        <div class="flex items-center gap-3">
-          <span class="text-xs t3 w-11 shrink-0 tabular-nums">${fmtTime(b.start_time)}</span>
-          <div class="flex-1 h-4 rounded overflow-hidden well">
-            <div class="h-full rounded bar-${b.descriptor}"
-                 style="width:${Math.max(3, (b.per_kwh / maxPrice) * 100).toFixed(1)}%"></div>
-          </div>
-          <span class="text-xs t2 w-12 text-right tabular-nums shrink-0">${b.per_kwh.toFixed(1)}c</span>
-          <span class="text-xs shrink-0 px-2 py-0.5 rounded p-${b.descriptor} w-20 text-center">
-            ${PRICE_LABELS[b.descriptor] ?? b.descriptor}
-          </span>
+        <div class="stat-cell">
+          <svg class="stat-icon" viewBox="0 0 24 24" fill="none" stroke="#6b88aa" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+          <div class="stat-num" style="font-family:'JetBrains Mono',monospace" id="today-load">–</div>
+          <div class="stat-lbl">Used kWh</div>
         </div>
-      `).join('');
+        <div class="stat-cell">
+          <svg class="stat-icon" viewBox="0 0 24 24" fill="none" stroke="#4f8ef7" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+          <div class="stat-num" style="font-family:'JetBrains Mono',monospace" id="today-import">–</div>
+          <div class="stat-lbl">Import kWh</div>
+        </div>
+        <div class="stat-cell">
+          <svg class="stat-icon" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+          <div class="stat-num" style="font-family:'JetBrains Mono',monospace" id="today-export">–</div>
+          <div class="stat-lbl">Export kWh</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Weather -->
+    <div class="card col-span-2" id="weather-card">
+      <div class="card-label">Weather — <span id="wx-place">–</span></div>
+      <div style="display:flex;align-items:flex-end;gap:.875rem;margin-bottom:.625rem">
+        <span id="wx-temp" class="wx-temp-num">–</span>
+        <span style="font-size:1.125rem;color:var(--text-2);padding-bottom:.35rem">°C</span>
+        <span id="wx-feels" style="font-size:.8125rem;color:var(--text-2);padding-bottom:.375rem">–</span>
+      </div>
+      <p id="wx-desc" style="font-size:.9375rem;font-weight:500;color:var(--text-1);margin-bottom:.875rem">–</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:.875rem">
+        <div class="pill-cell">
+          <div class="pill-label">Cloud Cover</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:1.25rem;font-weight:600;color:var(--text-1);margin:.2rem 0"><span id="wx-cloud">–</span><span class="pill-unit">%</span></div>
+          <div style="height:3px;background:var(--elevated);border-radius:9999px;overflow:hidden"><div id="wx-cloud-bar" style="height:100%;background:#6b88aa;border-radius:9999px;transition:width .5s;width:0%"></div></div>
+        </div>
+        <div class="pill-cell">
+          <div class="pill-label">Solar Irr.</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:1.25rem;font-weight:600;color:var(--text-1);margin:.2rem 0"><span id="wx-solar">–</span><span class="pill-unit">W/m²</span></div>
+          <div style="height:3px;background:var(--elevated);border-radius:9999px;overflow:hidden"><div id="wx-solar-bar" style="height:100%;background:#f59e0b;border-radius:9999px;transition:width .5s;width:0%"></div></div>
+        </div>
+      </div>
+      <div class="card-label" style="margin-bottom:.5rem">Next 6 Hours</div>
+      <div id="wx-hourly" class="wx-hourly"></div>
+      <p id="wx-trend" style="font-size:.75rem;color:var(--text-2);margin-top:.75rem;line-height:1.55">–</p>
+    </div>
+
+    <!-- Forecast -->
+    <div class="card">
+      <div class="card-label">Price Forecast</div>
+      <div id="forecast"></div>
+    </div>
+
+    <!-- Override -->
+    <div class="card col-span-2">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.875rem">
+        <div class="card-label" style="margin-bottom:0">Manual Override</div>
+        <div id="override-badge" class="override-badge hidden">
+          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          Manual active
+        </div>
+      </div>
+      <p id="override-expiry" class="hidden" style="font-size:.75rem;color:#f59e0b;margin-bottom:.75rem"></p>
+      <div class="override-grid">
+        <button id="btn-auto"    onclick="setOverride('auto')"              class="ovr-btn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Auto</button>
+        <button id="btn-load"    onclick="setOverride('set_load_first')"    class="ovr-btn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>Normal</button>
+        <button id="btn-battery" onclick="setOverride('set_battery_first')" class="ovr-btn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="16" height="10" rx="2"/><line x1="22" y1="11" x2="22" y2="13"/></svg>Charge</button>
+        <button id="btn-export"  onclick="setOverride('set_grid_first')"    class="ovr-btn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Export</button>
+      </div>
+      <div class="pill-label" style="margin-bottom:.4rem">Hold for</div>
+      <div class="dur-row">
+        <button id="dur-1"   onclick="setDuration(1)"    class="dur-btn">1h</button>
+        <button id="dur-2"   onclick="setDuration(2)"    class="dur-btn">2h</button>
+        <button id="dur-4"   onclick="setDuration(4)"    class="dur-btn">4h</button>
+        <button id="dur-inf" onclick="setDuration(null)" class="dur-btn">∞</button>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<nav class="bottom-nav">
+  <a href="/"        class="nav-tab active"><svg class="nav-icon" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>Live</a>
+  <a href="/history" class="nav-tab"><svg class="nav-icon" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>History</a>
+</nav>
+
+<script>
+  const html = document.documentElement;
+  function applyTheme(t) {
+    html.setAttribute('data-theme', t);
+    document.getElementById('icon-moon').classList.toggle('hidden', t !== 'dark');
+    document.getElementById('icon-sun' ).classList.toggle('hidden', t === 'dark');
+    localStorage.setItem('theme', t);
+  }
+  function toggleTheme() { applyTheme(html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'); }
+  (function() {
+    const s = localStorage.getItem('theme');
+    applyTheme(s ?? (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'));
+  })();
+
+  let selectedDuration = 2, currentOverride = null, lastUpdated = null;
+
+  const PRICE_LABELS = { extremely_low:'Extremely Low', very_low:'Very Low', low:'Low', neutral:'Neutral', high:'High', spike:'Spike' };
+  const ACTION_LABELS = { none:'Running normally', set_load_first:'Normal mode', set_battery_first:'Charging from grid', set_grid_first:'Exporting to grid', enable_ac_charge:'Pre-charging (heating)' };
+
+  const CX=96, CY=96, R=78;
+  function toRad(d) { return d * Math.PI / 180; }
+  function arcPoint(deg) { return [CX + R*Math.cos(toRad(deg)), CY + R*Math.sin(toRad(deg))]; }
+  function gaugePath(soc) {
+    if (soc <= 0) return `M ${CX} ${CY}`;
+    const sweep = (Math.min(soc, 100) / 100) * 270;
+    const [x1,y1] = arcPoint(225), [x2,y2] = arcPoint(225 + sweep);
+    return `M ${x1.toFixed(2)} ${y1.toFixed(2)} A ${R} ${R} 0 ${sweep > 180 ? 1 : 0} 1 ${x2.toFixed(2)} ${y2.toFixed(2)}`;
+  }
+  function socColor(s) { return s >= 70 ? '#10b981' : s >= 40 ? '#f59e0b' : '#ef4444'; }
+  function fmtW(w) { const a=Math.abs(w); return a>=1000?(a/1000).toFixed(1)+' kW':Math.round(a)+' W'; }
+  function relTime(iso) { const s=Math.floor((Date.now()-new Date(iso))/1000); if(s<60)return s+'s ago'; if(s<3600)return Math.floor(s/60)+'m ago'; return Math.floor(s/3600)+'h ago'; }
+  function fmtTime(iso) { return new Date(iso).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}); }
+  function fmtHour(iso) { return new Date(iso).toLocaleTimeString([],{hour:'numeric',hour12:true}); }
+  function wxIcon(c) { if(c===0)return'☀️';if(c<=1)return'🌤️';if(c<=2)return'⛅';if(c<=3)return'☁️';if(c<=48)return'🌫️';if(c<=67)return'🌧️';if(c<=77)return'❄️';if(c<=82)return'🌦️';return'⛈️'; }
+
+  function render(data) {
+    document.getElementById('loading-state').classList.add('hidden');
+    document.getElementById('dashboard').classList.remove('hidden');
+    lastUpdated = data.updated;
+    const inv=data.inverter||{}, prices=data.prices||[], decision=data.decision||{};
+    currentOverride = data.override || null;
+
+    const staleMin = (Date.now() - new Date(data.updated)) / 60000;
+    const dot=document.getElementById('status-dot'), lbl=document.getElementById('status-label');
+    document.getElementById('last-updated').textContent = `Updated ${relTime(data.updated)}`;
+    dot.className = staleMin > 10 ? 'status-dot stale' : 'status-dot live';
+    lbl.textContent = staleMin > 10 ? 'Stale' : 'Live';
+
+    const soc=inv.soc??0, col=socColor(soc);
+    document.getElementById('gauge-fill').setAttribute('d', gaugePath(soc));
+    document.getElementById('gauge-fill').setAttribute('stroke', col);
+    document.getElementById('soc').textContent = soc;
+    document.getElementById('soc').style.color = col;
+    document.getElementById('status-text').textContent = inv.status_text ?? '–';
+
+    const pch=inv.pcharge1??0, pdis=inv.pdischarge1??0;
+    const bl=document.getElementById('batt-label'), bp=document.getElementById('batt-pwr');
+    if (pdis>50)      { bl.textContent='Discharging'; bp.textContent=fmtW(pdis); bp.style.color='#f97316'; }
+    else if (pch>50)  { bl.textContent='Charging';    bp.textContent='+'+fmtW(pch); bp.style.color='#10b981'; }
+    else              { bl.textContent='Battery';      bp.textContent='0 W'; bp.style.color=''; }
+    document.getElementById('bms-soh').textContent = inv.bms_soh ?? '–';
+
+    document.getElementById('svg-ppv').textContent   = fmtW(inv.ppv??0);
+    document.getElementById('svg-pload').textContent = fmtW(inv.plocal_load??0);
+    document.getElementById('svg-pbatt').textContent = pdis>50?'−'+fmtW(pdis):pch>50?'+'+fmtW(pch):'0 W';
+    const pac=inv.pac??0;
+    document.getElementById('svg-pgrid').textContent = pac>100?'↓'+fmtW(pac):pac<-100?'↑'+fmtW(Math.abs(pac)):'0 W';
+
+    const pb=document.getElementById('p-home-batt'), pg=document.getElementById('p-home-grid');
+    if (pch>50)       { pb.className='flow-path flow-anim-fwd'; pb.setAttribute('stroke','#10b981'); }
+    else if (pdis>50) { pb.className='flow-path flow-anim-rev'; pb.setAttribute('stroke','#f97316'); }
+    else              { pb.className='flow-path flow-anim-off'; pb.setAttribute('stroke','#6b88aa'); }
+    if (pac>100)      { pg.className='flow-path flow-anim-rev'; pg.setAttribute('stroke','#ef4444'); }
+    else if (pac<-100){ pg.className='flow-path flow-anim-fwd'; pg.setAttribute('stroke','#10b981'); }
+    else              { pg.className='flow-path flow-anim-off'; pg.setAttribute('stroke','#6b88aa'); }
+
+    const cur = prices.find(p => !p.is_forecast);
+    if (cur) {
+      document.getElementById('price-kwh').textContent = cur.per_kwh.toFixed(1);
+      const badge=document.getElementById('price-badge');
+      badge.textContent=PRICE_LABELS[cur.descriptor]??cur.descriptor;
+      badge.className=`price-descriptor p-${cur.descriptor}`;
+      const bar=document.getElementById('price-bar');
+      bar.className=`price-bar-fill bar-${cur.descriptor}`;
+      bar.style.width=Math.max(5,Math.min(100,(cur.per_kwh/40)*100)).toFixed(0)+'%';
     }
 
-    function renderOverride() {
-      const active = currentOverride ? currentOverride.action : 'auto';
-      const btnMap = {
-        'btn-auto':    'auto',
-        'btn-load':    'set_load_first',
-        'btn-battery': 'set_battery_first',
-        'btn-export':  'set_grid_first',
-      };
-      for (const [id, action] of Object.entries(btnMap)) {
-        document.getElementById(id).className =
-          `py-3.5 rounded-xl text-sm font-semibold transition-all ${action === active ? 'btn-active' : 'btn-idle'}`;
-      }
+    document.getElementById('decision-action').textContent = ACTION_LABELS[decision.action]??decision.action??'–';
+    document.getElementById('decision-reason').textContent = decision.reason??'–';
+    document.getElementById('today-solar').textContent  = (inv.epv_today??0).toFixed(1);
+    document.getElementById('today-load').textContent   = (inv.eload_today??0).toFixed(1);
+    document.getElementById('today-import').textContent = (inv.eimport_today??0).toFixed(1);
+    document.getElementById('today-export').textContent = (inv.eexport_today??0).toFixed(1);
 
-      const badge  = document.getElementById('override-badge');
-      const expiry = document.getElementById('override-expiry');
-      if (currentOverride) {
-        badge.classList.remove('hidden');
-        expiry.classList.remove('hidden');
-        expiry.textContent = currentOverride.expires
-          ? `Held until ${new Date(currentOverride.expires).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}`
-          : 'Held until cancelled';
-      } else {
-        badge.classList.add('hidden');
-        expiry.classList.add('hidden');
-      }
+    renderWeather(data.weather);
+    renderForecast(prices.filter(p => p.is_forecast));
+    renderOverride();
+    renderDuration(selectedDuration);
+  }
+
+  function renderWeather(wx) {
+    const card=document.getElementById('weather-card');
+    if (!wx) { card.classList.add('hidden'); return; }
+    card.classList.remove('hidden');
+    document.getElementById('wx-place').textContent  = wx.place_name;
+    document.getElementById('wx-temp').textContent   = wx.temperature.toFixed(1);
+    document.getElementById('wx-feels').textContent  = `Feels ${wx.feels_like.toFixed(0)}°`;
+    document.getElementById('wx-desc').textContent   = `${wxIcon(wx.weather_code)}  ${wx.weather_desc}`;
+    document.getElementById('wx-cloud').textContent  = wx.cloud_cover;
+    document.getElementById('wx-solar').textContent  = Math.round(wx.solar_radiation);
+    document.getElementById('wx-trend').textContent  = wx.trend;
+    document.getElementById('wx-cloud-bar').style.width = wx.cloud_cover + '%';
+    document.getElementById('wx-solar-bar').style.width = Math.min(100,(wx.solar_radiation/1000)*100) + '%';
+    const times=wx.hourly_times||[], codes=wx.hourly_codes||[], clouds=wx.hourly_clouds||[];
+    document.getElementById('wx-hourly').innerHTML = times.map((t,i) =>
+      `<div class="wx-hour"><div style="font-size:1.125rem;margin-bottom:.25rem">${wxIcon(codes[i]??0)}</div><div style="font-size:.5625rem;color:var(--text-3)">${fmtHour(t)}</div><div style="font-size:.6875rem;font-weight:600;color:var(--text-2);margin-top:.15rem">${clouds[i]??'–'}%</div></div>`
+    ).join('');
+  }
+
+  function renderForecast(intervals) {
+    const el=document.getElementById('forecast');
+    if (!intervals.length) { el.innerHTML='<p style="font-size:.8125rem;color:var(--text-3)">No forecast data</p>'; return; }
+    const blocks=[]; let cur=null;
+    for (const iv of intervals) {
+      if (!cur||cur.descriptor!==iv.descriptor) { cur={...iv,count:1}; blocks.push(cur); }
+      else { cur.count++; cur.end_time=iv.end_time; }
     }
+    const maxP=Math.max(...intervals.map(p=>p.per_kwh),1);
+    el.innerHTML=blocks.map(b=>`
+      <div class="fc-row">
+        <span class="fc-time">${fmtTime(b.start_time)}</span>
+        <div class="fc-bar-track"><div class="fc-bar-fill bar-${b.descriptor}" style="width:${Math.max(4,(b.per_kwh/maxP)*100).toFixed(1)}%"></div></div>
+        <span class="fc-price">${b.per_kwh.toFixed(1)}c</span>
+        <span class="fc-badge p-${b.descriptor}">${PRICE_LABELS[b.descriptor]??b.descriptor}</span>
+      </div>`).join('');
+  }
 
-    function renderDuration(hours) {
-      const map = { 'dur-1': 1, 'dur-2': 2, 'dur-4': 4, 'dur-inf': null };
-      for (const [id, val] of Object.entries(map)) {
-        document.getElementById(id).className =
-          `flex-1 py-2 rounded-lg text-xs font-medium transition-all ${val === hours ? 'dur-active' : 'dur-idle'}`;
-      }
+  function renderOverride() {
+    const active=currentOverride?currentOverride.action:'auto';
+    [['btn-auto','auto'],['btn-load','set_load_first'],['btn-battery','set_battery_first'],['btn-export','set_grid_first']]
+      .forEach(([id,a])=>document.getElementById(id).classList.toggle('active',a===active));
+    const badge=document.getElementById('override-badge'), expiry=document.getElementById('override-expiry');
+    if (currentOverride) {
+      badge.classList.remove('hidden'); expiry.classList.remove('hidden');
+      expiry.textContent=currentOverride.expires?`Until ${new Date(currentOverride.expires).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}`:'Until cancelled';
+    } else { badge.classList.add('hidden'); expiry.classList.add('hidden'); }
+  }
+
+  function renderDuration(h) {
+    [['dur-1',1],['dur-2',2],['dur-4',4],['dur-inf',null]]
+      .forEach(([id,v])=>document.getElementById(id).classList.toggle('active',v===h));
+  }
+
+  function setDuration(h) { selectedDuration=h; renderDuration(h); }
+
+  async function setOverride(action) {
+    const body={action};
+    if (action!=='auto'&&selectedDuration!==null) body.hours=selectedDuration;
+    try {
+      await fetch('/override',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      await loadState();
+    } catch(e) { console.error('Override failed',e); }
+  }
+
+  async function loadState() {
+    try {
+      const res=await fetch('/api/state');
+      if (res.status===503) return;
+      if (!res.ok) throw new Error(res.status);
+      render(await res.json());
+    } catch(e) {
+      document.getElementById('status-dot').className='status-dot stale';
     }
+  }
 
-    // ── Actions ──────────────────────────────────────────────────────────────
-    function setDuration(h) {
-      selectedDuration = h;
-      renderDuration(h);
-    }
+  function tickTimestamp() {
+    if (!lastUpdated) return;
+    document.getElementById('last-updated').textContent=`Updated ${relTime(lastUpdated)}`;
+  }
 
-    async function setOverride(action) {
-      const body = { action };
-      if (action !== 'auto' && selectedDuration !== null) body.hours = selectedDuration;
-      try {
-        await fetch('/override', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-        });
-        await loadState();
-      } catch (e) { console.error('Override failed', e); }
-    }
-
-    // ── Data loading ──────────────────────────────────────────────────────────
-    async function loadState() {
-      try {
-        const res = await fetch('/api/state');
-        if (res.status === 503) return;
-        if (!res.ok) throw new Error(res.status);
-        render(await res.json());
-      } catch (e) {
-        document.getElementById('status-dot').style.background = '#ef4444';
-      }
-    }
-
-    function tickTimestamp() {
-      if (!lastUpdated) return;
-      const el = document.getElementById('last-updated');
-      if (!el.classList.contains('stale'))
-        el.textContent = `Updated ${relTime(lastUpdated)}`;
-    }
-
-    loadState();
-    setInterval(loadState,     30_000);
-    setInterval(tickTimestamp,  5_000);
-  </script>
+  loadState();
+  setInterval(loadState,     30_000);
+  setInterval(tickTimestamp,  5_000);
+</script>
 </body>
 </html>
