@@ -1,0 +1,5 @@
+growattServer==2.1.0
+amberelectric
+python-dotenv
+fastapi
+uvicorn[standard]

@@ -1,0 +1,17 @@
+{
+  "name": "mcnutty-energy-manager",
+  "version": "1.0.0",
+  "description": "",
+  "main": "tailwind.config.js",
+  "scripts": {
+    "build-css": "tailwindcss -i static/input.css -o static/style.css --minify",
+    "watch-css": "tailwindcss -i static/input.css -o static/style.css --watch"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "tailwindcss": "^3.4.19"
+  }
+}

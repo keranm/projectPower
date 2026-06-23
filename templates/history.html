@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="McNutty Energy">
+  <title>McNutty Energy · History</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+  <style>
+    /* ── Design tokens ──────────────────────────────────────────────────────── */
+    :root {
+      --sat: env(safe-area-inset-top);
+      --sab: env(safe-area-inset-bottom);
+    }
+
+    [data-theme="dark"] {
+      --bg:          #020617;
+      --surface:     #0f172a;
+      --border:      #1e293b;
+      --well:        #1e293b;
+      --text-1:      #f1f5f9;
+      --text-2:      #94a3b8;
+      --text-3:      #475569;
+      --divider:     #1e293b;
+      --track-off:   #334155;
+      --track-on:    #3b82f6;
+      --thumb:       #f1f5f9;
+      --dur-active-bg:   #334155;
+      --dur-active-text: #f1f5f9;
+      --dur-idle-bg:     #0f172a;
+      --dur-idle-text:   #475569;
+      --dur-idle-border: #1e293b;
+    }
+
+    [data-theme="light"] {
+      --bg:          #f0f4f8;
+      --surface:     #ffffff;
+      --border:      #e2e8f0;
+      --well:        #e8edf3;
+      --text-1:      #1e293b;
+      --text-2:      #64748b;
+      --text-3:      #94a3b8;
+      --divider:     #e2e8f0;
+      --track-off:   #cbd5e1;
+      --track-on:    #3b82f6;
+      --thumb:       #ffffff;
+      --dur-active-bg:   #1e293b;
+      --dur-active-text: #f1f5f9;
+      --dur-idle-bg:     #ffffff;
+      --dur-idle-text:   #64748b;
+      --dur-idle-border: #e2e8f0;
+    }
+
+    body {
+      -webkit-tap-highlight-color: transparent;
+      background: var(--bg);
+      color: var(--text-1);
+      transition: background 0.25s, color 0.25s;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 1rem;
+      padding: 1.25rem;
+      transition: background 0.25s, border-color 0.25s;
+    }
+
+    .well  { background: var(--well); }
+    .t1    { color: var(--text-1); }
+    .t2    { color: var(--text-2); }
+    .t3    { color: var(--text-3); }
+    .label { color: var(--text-3); font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.1em; }
+    .div-line { border-color: var(--divider); }
+
+    .switch {
+      position: relative;
+      width: 2.5rem;
+      height: 1.5rem;
+      border-radius: 9999px;
+      background: var(--track-off);
+      transition: background 0.25s;
+      cursor: pointer;
+      border: none;
+      outline: none;
+      flex-shrink: 0;
+    }
+    .switch.on { background: var(--track-on); }
+    .switch-thumb {
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 1.125rem;
+      height: 1.125rem;
+      border-radius: 50%;
+      background: var(--thumb);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+      transition: transform 0.25s cubic-bezier(.4,0,.2,1), background 0.25s;
+    }
+    .switch.on .switch-thumb { transform: translateX(1rem); }
+
+    .range-btn {
+      flex: 1;
+      padding: 0.5rem 0;
+      border-radius: 0.5rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-align: center;
+      transition: all 0.15s;
+      background: var(--dur-idle-bg);
+      color: var(--dur-idle-text);
+      border: 1px solid var(--dur-idle-border);
+      cursor: pointer;
+    }
+    .range-btn.active {
+      background: var(--dur-active-bg);
+      color: var(--dur-active-text);
+      border-color: transparent;
+    }
+
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      padding-bottom: var(--sab);
+      transition: background 0.25s, border-color 0.25s;
+      z-index: 100;
+    }
+    .nav-tab {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0.5rem 0;
+      gap: 0.125rem;
+      color: var(--text-3);
+      text-decoration: none;
+      font-size: 0.625rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      transition: color 0.2s;
+    }
+    .nav-tab.active { color: var(--text-1); }
+    .nav-tab .nav-icon { font-size: 1.25rem; line-height: 1; }
+  </style>
+</head>
+<body class="min-h-screen font-sans antialiased">
+  <div class="max-w-md mx-auto px-4 space-y-3"
+       style="padding-top:max(1.25rem,var(--sat));padding-bottom:max(6rem,calc(4rem + var(--sab)))">
+
+    <!-- Header -->
+    <div class="flex items-center justify-between py-1">
+      <div>
+        <h1 class="text-base font-bold tracking-tight t1">History</h1>
+        <p id="data-summary" class="text-xs t3">Loading…</p>
+      </div>
+      <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2">
+          <span class="text-sm select-none">🌙</span>
+          <button id="theme-switch" class="switch" onclick="toggleTheme()" aria-label="Toggle theme">
+            <div class="switch-thumb"></div>
+          </button>
+          <span class="text-sm select-none">☀️</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Range selector -->
+    <div class="card py-3 px-3">
+      <div class="flex gap-2">
+        <button id="range-6"   class="range-btn" onclick="setRange(6)">6h</button>
+        <button id="range-24"  class="range-btn" onclick="setRange(24)">24h</button>
+        <button id="range-168" class="range-btn" onclick="setRange(168)">7d</button>
+        <button id="range-720" class="range-btn" onclick="setRange(720)">30d</button>
+      </div>
+    </div>
+
+    <!-- Loading -->
+    <div id="loading-charts" class="text-center py-20 t3">
+      <div class="text-5xl mb-3">📊</div>
+      <p class="text-sm">Loading history…</p>
+    </div>
+
+    <!-- Empty state -->
+    <div id="empty-state" class="hidden text-center py-20 t3">
+      <div class="text-5xl mb-3">🌱</div>
+      <p class="text-sm font-medium t2 mb-1">No history yet</p>
+      <p class="text-xs">Data will appear after the scheduler runs a few cycles.</p>
+    </div>
+
+    <!-- Charts (shown when data is ready) -->
+    <div id="charts-container" class="hidden space-y-3">
+
+      <!-- Battery SOC -->
+      <div class="card">
+        <p class="label mb-3">Battery State of Charge</p>
+        <div style="height:180px;position:relative">
+          <canvas id="chart-soc"></canvas>
+        </div>
+      </div>
+
+      <!-- Power flows -->
+      <div class="card">
+        <p class="label mb-1">Power Flow</p>
+        <div id="power-legend" class="flex gap-3 mb-2"></div>
+        <div style="height:200px;position:relative">
+          <canvas id="chart-power"></canvas>
+        </div>
+      </div>
+
+      <!-- Price -->
+      <div class="card">
+        <p class="label mb-3">Electricity Price</p>
+        <div style="height:140px;position:relative">
+          <canvas id="chart-price"></canvas>
+        </div>
+      </div>
+
+      <!-- Decision log -->
+      <div class="card">
+        <div class="flex items-center justify-between mb-3">
+          <p class="label">Decision Log</p>
+          <span id="decision-count" class="text-xs t3"></span>
+        </div>
+        <div id="decisions-list"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Bottom navigation -->
+  <nav class="bottom-nav">
+    <div class="max-w-md mx-auto flex">
+      <a href="/"        class="nav-tab">        <span class="nav-icon">⚡</span>Live</a>
+      <a href="/history" class="nav-tab active"><span class="nav-icon">📊</span>History</a>
+    </div>
+  </nav>
+
+  <script>
+    // ── State (must be declared before applyTheme is called) ─────────────────
+    let currentRange = 24;
+    let currentData  = null;
+    let chartsReady  = false;
+    let chartSOC, chartPower, chartPrice;
+
+    // ── Theme ────────────────────────────────────────────────────────────────
+    const html = document.documentElement;
+
+    function applyTheme(theme) {
+      html.setAttribute('data-theme', theme);
+      const sw = document.getElementById('theme-switch');
+      if (theme === 'light') sw.classList.add('on'); else sw.classList.remove('on');
+      localStorage.setItem('theme', theme);
+      if (chartsReady) rebuildCharts();
+    }
+
+    function toggleTheme() {
+      applyTheme(html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+    }
+
+    (function initTheme() {
+      const saved  = localStorage.getItem('theme');
+      const system = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+      applyTheme(saved ?? system);
+    })();
+
+    // ── Chart theme helpers ──────────────────────────────────────────────────
+    function cc(varName) {
+      return getComputedStyle(html).getPropertyValue(varName).trim();
+    }
+
+    function chartAxes() {
+      return {
+        x: {
+          type: 'time',
+          time: {
+            tooltipFormat: 'MMM d, HH:mm',
+            displayFormats: { minute: 'HH:mm', hour: 'HH:mm', day: 'MMM d' },
+          },
+          grid: { color: cc('--border') },
+          ticks: { color: cc('--text-3'), maxTicksLimit: 6, font: { size: 10 } },
+        },
+        y: {
+          grid: { color: cc('--border') },
+          ticks: { color: cc('--text-3'), font: { size: 10 } },
+        },
+      };
+    }
+
+    const CHART_OPTS = {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 250 },
+      interaction: { mode: 'index', intersect: false },
+      plugins: { legend: { display: false } },
+    };
+
+    // ── Colour maps ──────────────────────────────────────────────────────────
+    const PRICE_FILL = {
+      extremely_low: '#10b981',
+      very_low:      '#22c55e',
+      low:           '#a3e635',
+      neutral:       '#fbbf24',
+      high:          '#f97316',
+      spike:         '#ef4444',
+    };
+
+    const ACTION_LABEL = {
+      none:              'No change',
+      set_load_first:    'Normal',
+      set_battery_first: 'Grid charge',
+      set_grid_first:    'Export',
+      enable_ac_charge:  'Pre-charge',
+    };
+
+    const ACTION_COLOR = {
+      none:              '#475569',
+      set_load_first:    '#64748b',
+      set_battery_first: '#10b981',
+      set_grid_first:    '#f97316',
+      enable_ac_charge:  '#60a5fa',
+    };
+
+    // ── Range selector ───────────────────────────────────────────────────────
+    function setRange(hours) {
+      currentRange = hours;
+      document.querySelectorAll('.range-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById(`range-${hours}`).classList.add('active');
+      loadData();
+    }
+
+    function initRange() {
+      document.getElementById('range-24').classList.add('active');
+    }
+
+    // ── Data fetch ───────────────────────────────────────────────────────────
+    async function loadData() {
+      try {
+        const res  = await fetch(`/api/history?hours=${currentRange}`);
+        const data = await res.json();
+        currentData = data;
+        if (!data.readings || data.readings.length === 0) {
+          showEmpty();
+        } else {
+          showCharts(data);
+        }
+      } catch(e) {
+        document.getElementById('data-summary').textContent = 'Error loading data';
+      }
+    }
+
+    function showEmpty() {
+      document.getElementById('loading-charts').classList.add('hidden');
+      document.getElementById('charts-container').classList.add('hidden');
+      document.getElementById('empty-state').classList.remove('hidden');
+    }
+
+    function showCharts(data) {
+      document.getElementById('loading-charts').classList.add('hidden');
+      document.getElementById('empty-state').classList.add('hidden');
+      document.getElementById('charts-container').classList.remove('hidden');
+
+      const n = data.readings.length;
+      const label = currentRange >= 168 ? `${Math.round(currentRange/24)}d` : `${currentRange}h`;
+      document.getElementById('data-summary').textContent = `${n} readings · last ${label}`;
+
+      buildCharts(data.readings);
+      renderDecisions(data.decisions);
+      chartsReady = true;
+    }
+
+    // ── Chart builders ───────────────────────────────────────────────────────
+    function destroyCharts() {
+      [chartSOC, chartPower, chartPrice].forEach(c => { if (c) c.destroy(); });
+      chartSOC = chartPower = chartPrice = null;
+    }
+
+    function rebuildCharts() {
+      if (!currentData || !currentData.readings.length) return;
+      destroyCharts();
+      buildCharts(currentData.readings);
+    }
+
+    function buildCharts(readings) {
+      const labels = readings.map(r => r.ts * 1000);
+      const axes   = chartAxes();
+
+      // ── SOC chart ──────────────────────────────────────────────────────────
+      destroyCharts();
+
+      const socData = readings.map(r => r.soc);
+      const filled  = labels.length;
+
+      chartSOC = new Chart(document.getElementById('chart-soc'), {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            {
+              data: socData,
+              borderColor: '#10b981',
+              backgroundColor: 'rgba(16,185,129,0.12)',
+              fill: true,
+              tension: 0.3,
+              pointRadius: 0,
+              borderWidth: 2,
+            },
+            // Threshold lines
+            {
+              data: Array(filled).fill(70),
+              borderColor: 'rgba(16,185,129,0.25)',
+              borderDash: [4, 4],
+              borderWidth: 1,
+              pointRadius: 0,
+              fill: false,
+            },
+            {
+              data: Array(filled).fill(40),
+              borderColor: 'rgba(239,68,68,0.25)',
+              borderDash: [4, 4],
+              borderWidth: 1,
+              pointRadius: 0,
+              fill: false,
+            },
+          ]
+        },
+        options: {
+          ...CHART_OPTS,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              filter: item => item.datasetIndex === 0,
+              callbacks: { label: ctx => `SOC: ${ctx.parsed.y}%` },
+            },
+          },
+          scales: {
+            x: axes.x,
+            y: { ...axes.y, min: 0, max: 100, ticks: { ...axes.y.ticks, callback: v => v + '%' } },
+          },
+        },
+      });
+
+      // ── Power chart ────────────────────────────────────────────────────────
+      chartPower = new Chart(document.getElementById('chart-power'), {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            {
+              label: 'Solar',
+              data: readings.map(r => r.ppv),
+              borderColor: '#fbbf24',
+              backgroundColor: 'rgba(251,191,36,0.08)',
+              fill: true,
+              tension: 0.3,
+              pointRadius: 0,
+              borderWidth: 2,
+            },
+            {
+              label: 'Load',
+              data: readings.map(r => r.plocal_load),
+              borderColor: '#60a5fa',
+              tension: 0.3,
+              pointRadius: 0,
+              borderWidth: 2,
+            },
+            {
+              label: 'Grid',
+              data: readings.map(r => r.pac),
+              borderColor: '#94a3b8',
+              tension: 0.3,
+              pointRadius: 0,
+              borderWidth: 1.5,
+              borderDash: [5, 3],
+            },
+          ]
+        },
+        options: {
+          ...CHART_OPTS,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: ctx => `${ctx.dataset.label}: ${fmtW(ctx.parsed.y)}`,
+              },
+            },
+          },
+          scales: {
+            x: axes.x,
+            y: {
+              ...axes.y,
+              ticks: {
+                ...axes.y.ticks,
+                callback: v => Math.abs(v) >= 1000 ? (v/1000).toFixed(1)+'kW' : Math.round(v)+'W',
+              },
+            },
+          },
+        },
+      });
+
+      // Inline legend (simpler than Chart.js legend plugin)
+      document.getElementById('power-legend').innerHTML = [
+        ['#fbbf24', 'Solar'],
+        ['#60a5fa', 'Load'],
+        ['#94a3b8', 'Grid'],
+      ].map(([col, lbl]) =>
+        `<span class="flex items-center gap-1 text-xs t3">
+           <span style="width:1.5rem;height:2px;background:${col};display:inline-block;border-radius:2px"></span>
+           ${lbl}
+         </span>`
+      ).join('');
+
+      // ── Price chart ────────────────────────────────────────────────────────
+      chartPrice = new Chart(document.getElementById('chart-price'), {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            data: readings.map(r => r.price_kwh),
+            backgroundColor: readings.map(r => PRICE_FILL[r.price_desc] ?? '#475569'),
+            borderWidth: 0,
+            barPercentage: 1.1,
+            categoryPercentage: 1.1,
+          }]
+        },
+        options: {
+          ...CHART_OPTS,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: ctx => ctx.parsed.y != null ? `${ctx.parsed.y.toFixed(1)} c/kWh` : '–',
+              },
+            },
+          },
+          scales: {
+            x: axes.x,
+            y: { ...axes.y, ticks: { ...axes.y.ticks, callback: v => v + 'c' } },
+          },
+        },
+      });
+    }
+
+    // ── Decision log ─────────────────────────────────────────────────────────
+    function renderDecisions(decisions) {
+      const el    = document.getElementById('decisions-list');
+      const count = document.getElementById('decision-count');
+
+      if (!decisions || !decisions.length) {
+        el.innerHTML = '<p class="text-xs t3 text-center py-4">No decisions recorded yet</p>';
+        count.textContent = '';
+        return;
+      }
+
+      count.textContent = `${decisions.length} logged`;
+
+      el.innerHTML = decisions.map(d => {
+        const dt    = new Date(d.ts * 1000);
+        const time  = dt.toLocaleString([], {
+          month: 'short', day: 'numeric',
+          hour: '2-digit', minute: '2-digit',
+        });
+        const label = ACTION_LABEL[d.action] ?? d.action;
+        const col   = ACTION_COLOR[d.action]  ?? '#475569';
+        const ovr   = d.was_override
+          ? `<span class="ml-1.5 text-xs px-1.5 py-0.5 rounded" style="background:#fbbf2422;color:#fbbf24">overridden</span>`
+          : '';
+
+        return `
+          <div class="flex gap-3 items-start py-2.5 border-b div-line last:border-0">
+            <div class="text-xs t3 w-24 shrink-0 pt-0.5 tabular-nums leading-snug">${time}</div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-1.5 mb-0.5 flex-wrap">
+                <span class="text-xs font-semibold px-2 py-0.5 rounded"
+                      style="background:${col}22;color:${col}">${label}</span>
+                ${ovr}
+              </div>
+              <p class="text-xs t2 leading-snug">${d.reason ?? ''}</p>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // ── Helpers ──────────────────────────────────────────────────────────────
+    function fmtW(w) {
+      const abs = Math.abs(w);
+      return (w < 0 ? '−' : '') + (abs >= 1000 ? (abs/1000).toFixed(1)+' kW' : Math.round(abs)+' W');
+    }
+
+    // ── Boot ─────────────────────────────────────────────────────────────────
+    initRange();
+    loadData();
+  </script>
+</body>
+</html>
