@@ -106,6 +106,16 @@ def evaluate(state: InverterState, prices: List[PriceInterval], weather=None) ->
             priority=4,
         )
 
+    # --- Priority 5: High price, SOC below export floor --- hold battery for self-consumption
+    # SOC is too low to export, but prices are still high — stay in Battery First so the
+    # battery powers the house rather than importing from the grid at peak rates.
+    if current_descriptor in HIGH_DESCRIPTORS and feedin_positive:
+        return Decision(
+            action="set_battery_first",
+            reason=f"high price (buy {current_price.per_kwh:.0f}c) but SOC {state.soc}% at/below export floor — conserving battery",
+            priority=0,
+        )
+
     # --- Default: preserve solar window, otherwise load first ---
     if _in_window(current_time, cfg.solar_window_start, cfg.solar_window_end):
         return Decision(

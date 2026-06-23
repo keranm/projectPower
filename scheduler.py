@@ -110,7 +110,6 @@ def main() -> None:
         log.info("Shutting down")
     finally:
         amber.close()
-        sys.exit(0)
 
 
 if __name__ == "__main__":
