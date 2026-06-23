@@ -91,8 +91,11 @@ def evaluate(state: InverterState, prices: List[PriceInterval], weather=None) ->
         )
 
     # --- Priority 4: Export for profit ---
+    # Never export when sell price is negative — we'd pay to push power into the grid
+    feedin_positive = not current_feedin or current_feedin.per_kwh >= 0
     feedin_attractive = current_feedin and current_feedin.per_kwh >= cfg.export_feedin_min
-    if (current_descriptor in HIGH_DESCRIPTORS or feedin_attractive) and state.soc > cfg.export_soc_min:
+    can_export = (current_descriptor in HIGH_DESCRIPTORS and feedin_positive) or feedin_attractive
+    if can_export and state.soc > cfg.export_soc_min:
         fi_str = f", sell {current_feedin.per_kwh:.0f}c" if current_feedin else ""
         return Decision(
             action="set_grid_first",
