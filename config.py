@@ -15,7 +15,7 @@ class Config:
     amber_token: str = field(default_factory=lambda: os.environ["AMBER_TOKEN"])
     address: str = field(default_factory=lambda: os.getenv("ADDRESS", ""))
 
-    dry_run: bool = field(default_factory=lambda: os.getenv("DRY_RUN", "true").lower() == "true")
+    dry_run: bool = True  # FORCE DRY-RUN: remove this line and restore env-var line before going live
     poll_interval: int = field(default_factory=lambda: int(os.getenv("POLL_INTERVAL", "300")))
 
     morning_soc_target: int = field(default_factory=lambda: int(os.getenv("MORNING_SOC_TARGET", "60")))
