@@ -128,6 +128,8 @@ def evaluate(state: InverterState, prices: List[PriceInterval], weather=None) ->
             if hours_away > cfg.precharge_lead_hours:
                 continue
             est_soc = _estimated_soc_at_heating(state, cfg, hours_away)
+            drain_pct = (cfg.baseline_load_w * hours_away / (cfg.battery_capacity_kwh * 1000)) * 100
+            charge_target = min(90, int(soc_target + drain_pct))
             if (
                 est_soc < soc_target
                 and not _solar_will_refill(weather, window_start)
@@ -138,10 +140,11 @@ def evaluate(state: InverterState, prices: List[PriceInterval], weather=None) ->
                     action="enable_ac_charge",
                     reason=(
                         f"{label} heating in {hours_away:.1f}h, est. SOC {est_soc:.0f}% < {soc_target}% target, "
-                        f"charging at {current_price.per_kwh:.0f}c (forecast peak {forecast_peak_6h:.0f}c)"
+                        f"charging to {charge_target}% (target + {drain_pct:.0f}% drain) "
+                        f"at {current_price.per_kwh:.0f}c (forecast peak {forecast_peak_6h:.0f}c)"
                     ),
                     priority=2,
-                    target_soc=soc_target,
+                    target_soc=charge_target,
                 )
 
     # ── Priority 4: Opportunistic cheap grid charge ───────────────────────────────
